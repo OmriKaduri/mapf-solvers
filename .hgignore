@@ -1,0 +1,11 @@
+syntax: glob
+.svn/*
+obj/Debug/*
+bin/Debug/*
+bin/Release/*
+obj/Release/*
+*.orig
+.vs/*
+packages/*
+Pipfile.lock
+instances/*

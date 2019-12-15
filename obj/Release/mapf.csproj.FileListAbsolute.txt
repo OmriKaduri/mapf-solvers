@@ -1,0 +1,13 @@
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.csprojAssemblyReference.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.Properties.Resources.resources
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.csproj.GenerateResource.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.csproj.CoreCompileInputs.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Release\mapf.exe.config
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Release\mapf.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Release\mapf.exe
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Release\mapf.pdb
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.exe
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.pdb
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Release\System.ValueTuple.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Release\System.ValueTuple.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\mapf.csproj.CopyComplete

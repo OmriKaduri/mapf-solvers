@@ -1,0 +1,12 @@
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\CPF-experiment.exe.config
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\CPF-experiment.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\CPF-experiment.exe
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\CPF-experiment.pdb
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\CPF-experiment.exe.CodeAnalysisLog.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\CPF-experiment.exe.lastcodeanalysissucceeded
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\CPF-experiment.csprojAssemblyReference.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\CPF_experiment.Properties.Resources.resources
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\CPF-experiment.csproj.GenerateResource.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\CPF-experiment.csproj.CoreCompileInputs.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\CPF-experiment.exe
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\CPF-experiment.pdb
