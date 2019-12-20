@@ -591,10 +591,16 @@ namespace mapf
 
             //A_Star solver;
             //solver = new A_Star_WithOD(simple);
-            var mvc_for_cbs = new MvcHeuristicForCbs();
+           var mvc_for_cbs = new MvcHeuristicForCbs();
 
             // MA - CBS - Global - 10 / (EPEA */ SIC) choosing the first conflict in CBS nodes
-            solvers.Add(new CBS(astar, epea, 10));
+            //solvers.Add(new CBS(astar, epea, 10));
+
+            //// ICTS + ID 
+            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
+
+            //// EPEA* + ID
+            //solvers.Add(new IndependenceDetection(astar, epea,true));
 
             // ICTS + ID 
             solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
@@ -1082,7 +1088,7 @@ namespace mapf
                 "GridName", "GridRows", "GridColumns", "NumOfAgents", "NumOfObstacles", "InstanceId",
                 "BranchingFactor","ObstacleDensity", "AvgDistanceToGoal",
                 "MaxDistanceToGoal","MinDistanceToGoal","AvgStartDistances",
-                "AvgGoalDistances","PointsAtSPRatio"};
+                "AvgGoalDistances","PointsAtSPRatio","Sparsity"};
 
             foreach (string header in headers)
             {
@@ -1141,40 +1147,76 @@ namespace mapf
                 this.writeCellToCsv(instance.parameters[ProblemInstance.GRID_NAME_KEY]);
             else
                 this.writeCellToCsv("Unknown");
+            
             // Grid Rows col:
-            this.resultsWriter.Write(instance.grid.Length + RESULTS_DELIMITER);
+            var gridRows = instance.grid.Length;
+            this.resultsWriter.Write(gridRows + RESULTS_DELIMITER);
+            instance.AddFeature(gridRows);
+            
             // Grid Columns col:
-            this.resultsWriter.Write(instance.grid[0].Length + RESULTS_DELIMITER);
+            var gridCols = instance.grid[0].Length;
+            this.resultsWriter.Write(gridCols + RESULTS_DELIMITER);
+            instance.AddFeature(gridCols);
+
             // Num Of Agents col:
-            this.resultsWriter.Write(instance.agents.Length + RESULTS_DELIMITER);
+            var numOfAgents = instance.agents.Length;
+            this.resultsWriter.Write(numOfAgents + RESULTS_DELIMITER);
+            instance.AddFeature(numOfAgents);
+            
             // Num Of Obstacles col:
             this.resultsWriter.Write(instance.numObstacles + RESULTS_DELIMITER);
+            instance.AddFeature(instance.numObstacles);
+            
             // Instance Id col:
             this.resultsWriter.Write(instance.instanceId + RESULTS_DELIMITER);
 
             // Branching Factor col:
             int numberOfLegalMoves = Constants.ALLOW_DIAGONAL_MOVE ? Move.NUM_DIRECTIONS : Move.NUM_NON_DIAG_MOVES;
-            this.writeCellToCsv(Math.Pow(numberOfLegalMoves, numberOfAgents));
+            var branchingFactor = Math.Pow(numberOfLegalMoves, numberOfAgents);
+            this.writeCellToCsv(branchingFactor);
+            instance.AddFeature(branchingFactor);
 
             // Obstacle Density col:
-            this.writeCellToCsv((float)numOfObstacles / (float)gridSize);
+            var obstacleDensity = (float)numOfObstacles / (float)gridSize;
+            this.writeCellToCsv(obstacleDensity);
+            instance.AddFeature(obstacleDensity);
 
             // AvgDistanceToGoal col:
-            this.writeCellToCsv(instance.agentDistancesToGoal.Average());
+            var avgDistanceToGoal = instance.agentDistancesToGoal.Average();
+            this.writeCellToCsv(avgDistanceToGoal);
+            instance.AddFeature(avgDistanceToGoal);
 
             // MaxDistanceToGoal col
-            this.writeCellToCsv(instance.agentDistancesToGoal.Max());
+            var maxDistanceToGoal = instance.agentDistancesToGoal.Max();
+            this.writeCellToCsv(maxDistanceToGoal);
+            instance.AddFeature(maxDistanceToGoal);
 
             // MinDistanceToGoal col
-            this.writeCellToCsv(instance.agentDistancesToGoal.Min());
+            var minDistanceToGoal = instance.agentDistancesToGoal.Min();
+            this.writeCellToCsv(minDistanceToGoal);
+            instance.AddFeature(minDistanceToGoal);
 
             // AvgStartDistances col:
-            this.writeCellToCsv(instance.AverageStartDistances());
+            var avgStartDistances = instance.AverageStartDistances();
+            this.writeCellToCsv(avgStartDistances);
+            instance.AddFeature(avgStartDistances);
 
             // AvgGoalDistances col:
-            this.writeCellToCsv(instance.AverageGoalDistances());
+            var avgGoalDistances = instance.AverageGoalDistances();
+            this.writeCellToCsv(avgGoalDistances);
+            instance.AddFeature(avgGoalDistances);
+
             // PointsAtSPRatio col:
-            this.writeCellToCsv(instance.RatioOfPointsAtSP());
+            var sp_ratio = instance.RatioOfPointsAtSP();
+            this.writeCellToCsv(sp_ratio);
+            instance.AddFeature(sp_ratio);
+
+            //Sparsity
+            //df['Sparsity'] = df.apply(lambda x: x['NumOfAgents'] / (x['GridSize'] - x['NumOfObstacles']), axis = 1)
+            var sparsity = (double)numOfAgents / (double)(gridSize - numOfObstacles);
+            this.writeCellToCsv(sparsity);
+            instance.AddFeature(sparsity);
+
         }
 
         private void ContinueToNextLine()

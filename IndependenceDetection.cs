@@ -3,6 +3,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
+using SharpLearning.XGBoost.Learners;
+using SharpLearning.XGBoost.Models;
 
 namespace mapf
 {
@@ -24,6 +26,8 @@ namespace mapf
         public int totalCost;
         protected Run runner;
 
+        public Boolean withSelection;
+
         /// <summary>
         /// The complete plan for all the agents that was found.
         /// </summary>
@@ -40,10 +44,12 @@ namespace mapf
         private Dictionary<TimedMove, List<int>> conflictAvoidance;
         private int maxSolutionCostFound;
 
-        public IndependenceDetection(ISolver singleAgentSolver, ISolver groupSolver)
+        public IndependenceDetection(ISolver singleAgentSolver, ISolver groupSolver, Boolean withSelection = false)
         {
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
+            this.withSelection = withSelection;
+
         }
 
         public void Clear()
@@ -71,7 +77,16 @@ namespace mapf
                         this.singleAgentSolver, this.groupSolver));
         }
 
-        public virtual String GetName() { return groupSolver.GetName() + "+ID"; }
+        public virtual String GetName() {
+            if (this.withSelection)
+            {
+                return groupSolver.GetName() + "+ID+AS";
+            }
+            else
+            {
+                return groupSolver.GetName() + "+ID";
+            }
+        }
 
         /// <summary>
         /// Calculate the full plan for all the agents that has been found by the algorithm
@@ -319,7 +334,7 @@ namespace mapf
                             conflict.group1.GetPlan().PrintPlan();
                         }
                         conflict.group1.removeGroupFromCAT(conflictAvoidance);
-                        bool resolved = conflict.group1.ReplanUnderConstraints(conflict.group2.GetPlan(), runner);
+                        bool resolved = conflict.group1.ReplanUnderConstraints(conflict.group2.GetPlan(), runner, withSelection);
                         conflict.group1.addGroupToCAT(conflictAvoidance, maxSolutionCostFound);
                         if (resolved == true)
                         {
@@ -348,7 +363,7 @@ namespace mapf
                             conflict.group2.GetPlan().PrintPlan();
                         }
                         conflict.group2.removeGroupFromCAT(conflictAvoidance);
-                        bool resolved = conflict.group2.ReplanUnderConstraints(conflict.group1.GetPlan(), runner);
+                        bool resolved = conflict.group2.ReplanUnderConstraints(conflict.group1.GetPlan(), runner, withSelection);
                         conflict.group2.addGroupToCAT(conflictAvoidance, maxSolutionCostFound);
                         if (resolved == true)
                         {
@@ -386,7 +401,15 @@ namespace mapf
                 compositeGroup.instance.parameters[CONFLICT_AVOIDANCE] = conflictAvoidance;
 
                 // Solve composite group with the underlying group solver
-                bool solved = compositeGroup.Solve(runner);
+                bool solved;
+                if (this.withSelection)
+                {
+                    solved = compositeGroup.SolveWithSelection(runner);
+                }
+                else
+                {
+                    solved = compositeGroup.Solve(runner);
+                }
 
                 if (compositeGroup.solutionCost > maxSolutionCostFound)
                     maxSolutionCostFound = compositeGroup.solutionCost;
@@ -504,13 +527,22 @@ namespace mapf
         private ISolver singleAgentSolver;
         private ISolver groupSolver;
         private Plan plan;
+
+        ClassificationXGBoostModel selectionModel;
         
+
         public IndependenceDetectionAgentsGroup(ProblemInstance instance, AgentState[] allAgentsState, ISolver singleAgentSolver, ISolver groupSolver)
         {
             this.allAgentsState = allAgentsState;
             this.instance = instance.Subproblem(allAgentsState);
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
+
+
+            var model_path = "C:\\Users\\omri\\Projects\\study\\2019semB\\agentsPlanning\\MAPF\\classification\\testing-clf.xgb";
+
+            //selectionModel = new ClassificationXGBoostLearner();
+            this.selectionModel = ClassificationXGBoostModel.Load(model_path);
         }
 
         /// <summary>
@@ -523,7 +555,7 @@ namespace mapf
             ISolver relevantSolver = this.groupSolver;
             if (this.allAgentsState.Length == 1)
                 relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
-
+            
             relevantSolver.Setup(this.instance, runner);
             bool solved = relevantSolver.Solve();
             this.solutionCost = relevantSolver.GetSolutionCost();
@@ -540,6 +572,109 @@ namespace mapf
             relevantSolver.Clear();
             return true;
         }
+
+
+        public string solverNameByIndex(double solverIndex)
+        {
+            switch (solverIndex)
+            {
+                case 0:
+                    return "EPEA";
+                case 1:
+                    return "MA-CBS";
+                case 2:
+                    return "ICTS";
+                case 3:
+                    return "ASTAR";
+                case 4:
+                    return "CBS";
+                case 5:
+                    return "CBS-H";
+                default:
+                    return "WHAT?";
+            }
+        }
+
+        public ISolver solverByIndex(double solverIndex)
+        {
+            var simple = new SumIndividualCosts();
+            var epea = new EPEA_Star(simple);
+            var astar = new A_Star(simple);
+            var macbs = new CBS(astar, epea, 10);
+            var icts = new CostTreeSearchSolverOldMatching(3);
+            var cbs = new CBS(astar, epea);
+            var mvc_for_cbs = new MvcHeuristicForCbs();
+
+            var cbsh = new CBS(astar, epea, 
+                mergeThreshold: -1, 
+                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
+                doMalte: false, 
+                CBS.ConflictChoice.CARDINAL_MDD,
+                mvc_for_cbs,
+                disableTieBreakingByMinOpsEstimate: true,
+                lookaheadMaxExpansions: 1,
+                mergeCausesRestart: true,
+                replanSameCostWithMdd: false,
+                cacheMdds: false,
+                useOldCost: false,
+                useCAT: true);
+
+            switch (solverIndex)
+            {
+                case 0:
+                    return epea;
+                case 1:
+                    return macbs;
+                case 2:
+                    return icts;
+                case 3:
+                    return astar;
+                case 4:
+                    return cbs;
+                case 5:
+                    return cbsh;
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Solve the group of agents together.
+        /// </summary>
+        /// <param name="runner"></param>
+        /// <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
+        public bool SolveWithSelection(Run runner)
+        {
+            ISolver relevantSolver = this.groupSolver;
+            if (this.allAgentsState.Length == 1)
+                relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            // the code that you want to measure comes here
+            var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
+            watch.Stop();
+            var elapsedMs = watch.ElapsedMilliseconds;
+            Console.WriteLine("Selection time: {0}", elapsedMs);
+
+            Console.WriteLine(solverNameByIndex(pred));
+            relevantSolver = solverByIndex(pred);
+            relevantSolver.Setup(this.instance, runner);
+            //this.sele
+            bool solved = relevantSolver.Solve();
+            this.solutionCost = relevantSolver.GetSolutionCost();
+            if (solved == false)
+                return false;
+
+            // Store the plan found by the solver
+            this.plan = relevantSolver.GetPlan();
+            this.expanded = relevantSolver.GetExpanded();
+            this.generated = relevantSolver.GetGenerated();
+            this.depthOfSolution = relevantSolver.GetSolutionDepth();
+
+            // Clear memory
+            relevantSolver.Clear();
+            return true;
+        }
+
 
         /// <summary>
         /// Returns the plan for the group of agents. This is a collection of Moves for every time step until all the agents reach their goal.
@@ -600,7 +735,7 @@ namespace mapf
         /// <param name="plan"></param>
         /// <param name="runner"></param>
         /// <returns></returns>
-        public bool ReplanUnderConstraints(Plan plan, Run runner)
+        public bool ReplanUnderConstraints(Plan plan, Run runner, Boolean withSelection)
         {
             int oldCost = this.solutionCost;
             Plan oldPlan = this.plan;
@@ -609,8 +744,16 @@ namespace mapf
 
             this.instance.parameters[IndependenceDetection.ILLEGAL_MOVES_KEY] = reserved;
             this.instance.parameters[IndependenceDetection.MAXIMUM_COST_KEY] = solutionCost;  // TODO: add IIndependenceDetectionSolver to ISolver.cs with a Setup method that takes a maxCost
-            bool success = this.Solve(runner);
-            this.instance.parameters.Remove(IndependenceDetection.ILLEGAL_MOVES_KEY);
+            bool success;
+            if (withSelection)
+            {
+                success = this.SolveWithSelection(runner);
+            }
+            else
+            {
+                success = this.Solve(runner); 
+            }
+                this.instance.parameters.Remove(IndependenceDetection.ILLEGAL_MOVES_KEY);
             this.instance.parameters.Remove(IndependenceDetection.MAXIMUM_COST_KEY);
             if (success == false)
             {

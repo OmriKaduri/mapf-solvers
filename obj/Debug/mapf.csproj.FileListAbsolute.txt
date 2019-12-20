@@ -11,3 +11,16 @@ C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\mapf.pdb
 C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\System.ValueTuple.dll
 C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\System.ValueTuple.xml
 C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Debug\mapf.csproj.CopyComplete
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.Common.Interfaces.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.Containers.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.DecisionTrees.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.GradientBoost.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.InputOutput.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.XGBoost.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\XGBoost.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.Common.Interfaces.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.Containers.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.DecisionTrees.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.GradientBoost.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.InputOutput.xml
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\bin\Debug\SharpLearning.XGBoost.xml

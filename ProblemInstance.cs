@@ -31,6 +31,15 @@ namespace mapf
         /// </summary>
         public bool[][] grid;
 
+        // ml_features will contain the features to predict according to them.
+        // The order of ml_features is: GridRows, GridColumns, NumOfAgents, NumOfObstacles, 
+        //                              BranchingFactor, ObstacleDensity, AvgDistanceToGoal,
+        //                              MaxDistanceToGoal, MinDistanceToGoal, AvgStartDistances, AvgGoalDistances	
+        //                              PointsAtSPRatio, Sparsity
+
+
+        public List<double> ml_features;
+
         /// <summary>
         /// We keep a reference to the array of agents in the original problem.
         /// This will only change when IndependenceDetection's algorithm determines in another
@@ -147,7 +156,7 @@ namespace mapf
             distanceBetweenAgentGoals = new int[agents.Length, agents.Length];
             distanceBetweenAgentStartPoints = new int[agents.Length, agents.Length];
 
-
+            ml_features = new List<double>();
         }
 
         /// <summary>
@@ -481,12 +490,12 @@ namespace mapf
                 line = input.ReadLine();
                 lineParts = line.Split(' ');
                 Debug.Assert(lineParts.Length == 2);
-                Debug.Assert(lineParts[0].Equals("height"));
+                //Debug.Assert(lineParts[0].Equals("height"));
                 maxY = int.Parse(lineParts[1]);  // The height is the number of rows
                 line = input.ReadLine();
                 lineParts = line.Split(' ');
                 Debug.Assert(lineParts.Length == 2);
-                Debug.Assert(lineParts[0].Equals("width"));
+                //Debug.Assert(lineParts[0].Equals("width"));
                 maxX = int.Parse(lineParts[1]);  // The width is the number of columns
                 grid = new bool[maxY][];
 
@@ -599,11 +608,13 @@ namespace mapf
                 }
                 Console.WriteLine("Found {0} agents", lines.Count);
 
-                for (int i = 2; i < lines.Count; i++)
+                
+                for (int i = 2; i < lines.Count+1; i++)
                 {
                     agentNum = 0;
                     stateList = new List<AgentState>();
-                    var rand_lines = lines.AsEnumerable().OrderBy(n => Guid.NewGuid()).Take(i).Cast<String>().ToList();
+                    //var rand_lines = lines.AsEnumerable().OrderBy(n => Guid.NewGuid()).Take(i).Cast<String>().ToList();
+                    var rand_lines = lines.Take(i);
                     if (File.Exists(agents_fileName))
                     {
                         bool already_executed = File.ReadLines(agents_fileName)
@@ -615,7 +626,7 @@ namespace mapf
                         }
 
                     }
-                 
+
                     var agents_writer = new StreamWriter(agents_fileName, true);
 
                     agents_writer.WriteLine("NumAgents: {0}", i);
@@ -627,7 +638,7 @@ namespace mapf
                         mapRows = int.Parse(lineParts[2]);
                         Debug.Assert(mapRows == maxX);
                         mapCols = int.Parse(lineParts[3]);
-                        Debug.Assert(mapRows == maxY);
+                        Debug.Assert(mapCols == maxY);
 
                         startY = int.Parse(lineParts[4]);
                         startX = int.Parse(lineParts[5]);
@@ -638,8 +649,11 @@ namespace mapf
                         state = new AgentState(startX, startY, agent);
                         stateList.Add(state);
                         agents_writer.WriteLine("{0},{1},{2},{3}", startX, startY, goalX, goalY);
+
                         agentNum++;
                     }
+                    agents_writer.Close();
+                    agents_writer = new StreamWriter(agents_fileName, true);
                     bool resultsFileExisted = File.Exists(Program.RESULTS_FILE_NAME);
                     runner.OpenResultsFile(Program.RESULTS_FILE_NAME);
 
@@ -850,6 +864,11 @@ namespace mapf
                     return instance;
                 }
             }
+        }
+
+        public void AddFeature(double feature)
+        {
+            ml_features.Append(feature);
         }
 
         /// <summary>
