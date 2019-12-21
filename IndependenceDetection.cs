@@ -538,8 +538,7 @@ namespace mapf
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
 
-
-            var model_path = "C:\\Users\\omri\\Projects\\study\\2019semB\\agentsPlanning\\MAPF\\classification\\testing-clf.xgb";
+            var model_path = Path.Combine(Environment.CurrentDirectory, "testing-clf.xgb");
 
             //selectionModel = new ClassificationXGBoostLearner();
             this.selectionModel = ClassificationXGBoostModel.Load(model_path);
