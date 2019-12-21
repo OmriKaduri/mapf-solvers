@@ -51,7 +51,7 @@ namespace mapf
             this.levels = new LinkedList<MDDNode>[numOfLevels + 1];
             this.supportPruning = supportPruning;
 
-            HashSet_U<CbsConstraint> constraints = null; 
+            HashSet_U<CbsConstraint> constraints = null;
             Dictionary<int, TimedMove>[] mustConstraints = null;
 
             if (ignoreConstraints == false && instance.parameters.ContainsKey(CBS.CONSTRAINTS) &&
@@ -279,8 +279,7 @@ namespace mapf
                 return (PruningDone.EVERYTHING, matchCounter);
 
             // Cheaply find the coexisting nodes on level zero - all nodes coexist because agent starting points never collide
-            var coexistingNodesForLevelZero = new HashSet<MDDNode>();
-            coexistingNodesForLevelZero.Add(other.levels[0].First.Value);
+            var coexistingNodesForLevelZero = new HashSet<MDDNode>() { other.levels[0].First.Value };
             levels[0].First.Value.SetCoexistingNodes(coexistingNodesForLevelZero, other.mddNum);
 
             for (int i = 1; i < levels.Length; i++)
@@ -290,16 +289,9 @@ namespace mapf
                 {
                     var node = linkedListNode.Value;
                     linkedListNode = linkedListNode.Next;  // Must be before any potential deletions!
-//                    if (linkedListNode.Value.isDeleted) // Previous level marked this MDDNode for deletion. Delete it and continue to the next.
-//                    {
-//                        LinkedListNode<MDDNode> tempToSetCoexisting = linkedListNode;
-//                        linkedListNode = linkedListNode.Next;
-//                        levels[i].Remove(tempToSetCoexisting);
-//                        continue;
-//                    }
-                    
+
                     var coexistingForNode = new HashSet<MDDNode>();
-                    
+
                     // Go over all the node's parents and test their coexisting nodes' children for coexistance with this node
                     LinkedListNode<MDDNode> parentLinkedListNode = node.parents.First;
                     while (parentLinkedListNode != null)
@@ -317,11 +309,8 @@ namespace mapf
                                     {
                                         validParent = true;
 
-                                        if (coexistingForNode.Contains(childOfParentCoexistingNode) == false)
-                                        {
+                                        if (coexistingForNode.Add(childOfParentCoexistingNode))
                                             matchCounter++;
-                                            coexistingForNode.Add(childOfParentCoexistingNode);
-                                        }
                                     }
                                 }
                             }
@@ -341,7 +330,7 @@ namespace mapf
                         pruningDone = PruningDone.SOME;
                     }
                 }
-                if (levels[0].Count == 0)
+                if (levels == null || levels[0].Count == 0)
                 {
                     return (PruningDone.EVERYTHING, matchCounter);
                 }
@@ -431,7 +420,7 @@ namespace mapf
         public MDD mdd;
         LinkedListNode<MDDNode> myNode;
         public bool startOrGoal;
-        public bool isDeleted;
+        public bool isBeingDeleted;
         public bool legal;  // For AstarMDD
 
         /// <summary>
@@ -461,35 +450,35 @@ namespace mapf
 
         public void delete()
         {
-            if (isDeleted)
+            if (isBeingDeleted)
                 return;
-            this.isDeleted = true;
-            LinkedListNode<MDDNode> toDelete = parents.First;
-            LinkedListNode<MDDNode> nextToDelete;
-            while (toDelete != null)
+            this.isBeingDeleted = true;
+            LinkedListNode<MDDNode> toDeleteFrom = parents.First;
+            LinkedListNode<MDDNode> nextToDeleteFrom;
+            while (toDeleteFrom != null)
             {
-                nextToDelete = toDelete.Next;
-                toDelete.Value.children.Remove(this);
-                toDelete.Value.deleteIfOrphanOrChildless();
-                toDelete = nextToDelete;
+                nextToDeleteFrom = toDeleteFrom.Next;
+                toDeleteFrom.Value.children.Remove(this);
+                toDeleteFrom.Value.deleteIfOrphanOrChildless();
+                toDeleteFrom = nextToDeleteFrom;
             }
-            toDelete = children.First;
-            while (toDelete != null)
+            toDeleteFrom = children.First;
+            while (toDeleteFrom != null)
             {
-                nextToDelete = toDelete.Next;
-                toDelete.Value.parents.Remove(this);
-                toDelete.Value.deleteIfOrphanOrChildless();
-                toDelete = nextToDelete;
+                nextToDeleteFrom = toDeleteFrom.Next;
+                toDeleteFrom.Value.parents.Remove(this);
+                toDeleteFrom.Value.deleteIfOrphanOrChildless();
+                toDeleteFrom = nextToDeleteFrom;
             }
             myNode.List.Remove(myNode);
 
-            if (this.mdd.levels[this.mdd.levels.Length - 1].Count == 0) // No possible route to goal remains
+            if (this.mdd.levels != null && this.mdd.levels[this.mdd.levels.Length - 1].Count == 0) // No possible route to goal remains
                 this.mdd.levels = null;
         }
-        
+
         public void deleteIfOrphanOrChildless()
         {
-            Debug.Assert(this.isDeleted == false, "unexpected");
+            Debug.Assert(this.isBeingDeleted == false, "unexpected");
             if (!this.startOrGoal)
             {
                 if (parents.Count == 0 || children.Count == 0)
@@ -519,10 +508,9 @@ namespace mapf
         public bool IsCoexistingWithOtherMDDs(MDDNode toCheck, int otherAgentIndex)
         {
             Debug.Assert(toCheck.mdd.getMddNum() == otherAgentIndex, "unexpected");
-            bool ans = false;
-            for (int i = this.mdd.getMddNum() + 1 ; i < otherAgentIndex; i++)
+            for (int i = this.mdd.getMddNum() + 1; i < otherAgentIndex; i++)
             {
-                ans = false;
+                bool ans = false;
                 foreach (MDDNode coexistingNode in this.coexistingNodesFromOtherMdds[i])
                 {
                     if (coexistingNode.coexistingNodesFromOtherMdds[toCheck.mdd.getMddNum()].Contains(toCheck))
@@ -544,33 +532,33 @@ namespace mapf
             parent.deleteIfOrphanOrChildless();
             this.deleteIfOrphanOrChildless();
         }
-        
+
         public void addParent(MDDNode parent)
         {
             parents.AddLast(parent);
         }
-        
+
         public void addChild(MDDNode child)
         {
             children.AddLast(child);
         }
-        
+
         public void SetCoexistingNodes(HashSet<MDDNode> coexistingNodes, int mddNum)
         {
             Debug.Assert(coexistingNodes.All(node => node.mdd.getMddNum() == mddNum), "unexpected");
             this.coexistingNodesFromOtherMdds[mddNum] = coexistingNodes;
         }
-        
+
         public void setMyNode(LinkedListNode<MDDNode> node)
         {
             this.myNode = node;
         }
-        
+
         public int getVertexIndex()
         {
             return move.x * this.mdd.problem.GetMaxY() + move.y;
         }
-        
+
         /// <summary>
         /// Only uses the move
         /// </summary>
@@ -582,7 +570,7 @@ namespace mapf
                 return move.GetHashCode();
             }
         }
-        
+
         /// <summary>
         /// Only uses the move
         /// </summary>
@@ -596,7 +584,7 @@ namespace mapf
             return this.move.Equals(comp.move); //if there is a bug return the level compare
                                                 // Behavior change: used to not compare the direction
         }
-        
+
         public int getCoexistingNodesCount(int otherAgent)
         {
             return coexistingNodesFromOtherMdds[otherAgent].Count;

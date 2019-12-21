@@ -112,13 +112,13 @@ namespace mapf
 
         private void reverseExpand(MddMatchAndPruneState toExpand)
         {
-            foreach (MddMatchAndPruneState parent in toExpand.parents) 
+            foreach (MddMatchAndPruneState parent in toExpand.parents)
             {
                 for (int i = 0; i < toExpand.allPositions.Length; i++)
                 {
                     this.nodeSolver.solver.edgesMatrix[i,
                                                        parent.allPositions[i].getVertexIndex(),
-                                                       (int) Move.Direction.Wait] =
+                                                       (int)Move.Direction.Wait] =
                         this.nodeSolver.solver.edgesMatrixCounter + 1;
                 }
                 if (closedList.ContainsKey(parent) == false)
@@ -136,17 +136,16 @@ namespace mapf
         /// <param name="level"></param>
         private void pruneLevel(int level)
         {
-            MDDNode[] parentsToDelete = new MDDNode[5];
             int parentI;
 
             for (int i = 0; i < allMDDs.Length; i++)
             {
+                if (allMDDs[i].levels == null)
+                    continue;
+
                 foreach (MDDNode node in allMDDs[i].levels[level])
                 {
-                    Debug.Assert(node.isDeleted == false);
-
-                    for (int d = 0; d < 5; d++)
-                        parentsToDelete[d] = null;
+                    MDDNode[] parentsToDelete = new MDDNode[5];
 
                     parentI = 0;
                     foreach (MDDNode parent in node.parents)
@@ -164,8 +163,8 @@ namespace mapf
                     }
                     foreach (MDDNode deleteParent in parentsToDelete)
                         if (deleteParent != null)
-                           node.removeParent(deleteParent);
-                }    
+                            node.removeParent(deleteParent);
+                }
             }
         }
 
@@ -183,16 +182,16 @@ namespace mapf
                 return false;
 
             Debug.Assert(openList.Count == 0);
-   
+
             MddMatchAndPruneState current = goal;
             int currentLevel = goal.stateLevel;
             closedList.Clear();
-   
+
             while (current.stateLevel > 0) // while not root
             {
                 if (runner.ElapsedMilliseconds() > Constants.MAX_TIME)
                     return false;
-   
+
                 if (current.stateLevel < currentLevel)
                 {
                     pruneLevel(currentLevel);
@@ -206,7 +205,7 @@ namespace mapf
             pruneLevel(currentLevel); //prune level 1
             return true;
         }
-   
+
     }
 
     class MddMatchAndPruneState
@@ -214,8 +213,8 @@ namespace mapf
         public MDDNode[] allPositions;
         public int stateLevel; //starts at 0
         public LinkedList<MddMatchAndPruneState> parents;
-        LinkedList<MddMatchAndPruneState> childrens; 
-   
+        LinkedList<MddMatchAndPruneState> childrens;
+
         public MddMatchAndPruneState(MDDNode[] allPositions)
         {
             this.allPositions = allPositions;
@@ -226,7 +225,7 @@ namespace mapf
 
         public MddMatchAndPruneState(LinkedListNode<MDDNode>[] allSuccessors)
         {
-            allPositions=new MDDNode[allSuccessors.Length];
+            allPositions = new MDDNode[allSuccessors.Length];
             for (int i = 0; i < allPositions.Length; i++)
             {
                 allPositions[i] = allSuccessors[i].Value;
@@ -235,12 +234,12 @@ namespace mapf
             this.parents = new LinkedList<MddMatchAndPruneState>();
             this.childrens = new LinkedList<MddMatchAndPruneState>();
         }
-       
+
         public void margeParents(LinkedList<MddMatchAndPruneState> otherParents)
         {
             parents.Union(otherParents);
         }
-   
+
         public void addParent(MddMatchAndPruneState parent)
         {
             this.parents.AddLast(parent);
@@ -259,7 +258,7 @@ namespace mapf
                 return ans;
             }
         }
-    
+
         public override bool Equals(object obj)
         {
             if (obj == null)
@@ -277,7 +276,7 @@ namespace mapf
 
         public successorIterator(int size)
         {
-            this.nodesFromChildrenList = new LinkedListNode<MDDNode>[size]; 
+            this.nodesFromChildrenList = new LinkedListNode<MDDNode>[size];
         }
 
         public void initialize(MddMatchAndPruneState prevStep)
@@ -336,11 +335,11 @@ namespace mapf
             if (agent == nodesFromChildrenList.Length)
                 return false;
             if (nextSuccessor(agent) == false)
-                return nextChild(agent+1);
+                return nextChild(agent + 1);
             while (isLegal(agent) == false)
             {
                 if (nextSuccessor(agent) == false)
-                    return nextChild(agent+1);
+                    return nextChild(agent + 1);
             }
 
             if (agent > 0 && isLegal(0) == false)
@@ -354,13 +353,13 @@ namespace mapf
         /// </summary>
         /// <param name="checkFrom"></param>
         /// <returns></returns>
-         private bool isLegal(int checkFrom)
+        private bool isLegal(int checkFrom)
         {
             // check if all moves are legal from the i agent forward (collisons+head on collisions)
-             for (int i = checkFrom; i < nodesFromChildrenList.Length - 1; i++)
+            for (int i = checkFrom; i < nodesFromChildrenList.Length - 1; i++)
             {
                 var node = nodesFromChildrenList[i].Value;
-                for (int j = i+1; j < nodesFromChildrenList.Length; j++)
+                for (int j = i + 1; j < nodesFromChildrenList.Length; j++)
                 {
                     var other = nodesFromChildrenList[j].Value;
                     // TODO: Replace the following duplicated logic is node.move.isColliding(other.move)
@@ -368,7 +367,7 @@ namespace mapf
                     if (node.Equals(other))
                         return false;
                     if (Constants.ALLOW_HEAD_ON_COLLISION == false &&
-                        node.getVertexIndex() == prevStep.allPositions[j].getVertexIndex() && 
+                        node.getVertexIndex() == prevStep.allPositions[j].getVertexIndex() &&
                         node.getVertexIndex() == prevStep.allPositions[i].getVertexIndex())
                         return false;
                 }
