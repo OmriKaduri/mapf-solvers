@@ -600,7 +600,7 @@ namespace mapf
             solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
 
             //// EPEA* + ID+AS
-            //solvers.Add(new IndependenceDetection(astar, epea,true));
+            solvers.Add(new IndependenceDetection(astar, epea,true));
 
             // ICTS + ID 
             solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
