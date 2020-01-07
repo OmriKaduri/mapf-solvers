@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace mapf
 {
@@ -467,11 +468,17 @@ namespace mapf
         {
             try
             {
-
                 ProblemInstance.Import(Directory.GetCurrentDirectory() + "\\" + scenMapFileName);
             }
             catch (Exception e)
             {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("ERROR! occured at: "+ DateTime.Now.ToString());
+                sb.Append(e);
+                // flush every 20 seconds as you do it
+                File.AppendAllText("log.txt", sb.ToString());
+                sb.Clear();
+
                 Console.WriteLine(String.Format("Skipping bad problem instance {0}. Error: {1}", scenMapFileName, e.Message));
                 return;
             }

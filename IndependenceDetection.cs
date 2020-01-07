@@ -529,7 +529,14 @@ namespace mapf
         private Plan plan;
 
         ClassificationXGBoostModel selectionModel;
-        
+        private SumIndividualCosts simple;
+        private EPEA_Star epea;
+        private A_Star astar;
+        private CBS macbs;
+        private CostTreeSearchSolverOldMatching icts;
+        private CBS cbs;
+        private MvcHeuristicForCbs mvc_for_cbs;
+        private CBS cbsh;
 
         public IndependenceDetectionAgentsGroup(ProblemInstance instance, AgentState[] allAgentsState, ISolver singleAgentSolver, ISolver groupSolver)
         {
@@ -537,11 +544,38 @@ namespace mapf
             this.instance = instance.Subproblem(allAgentsState);
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
-
+            
             var model_path = Path.Combine(Environment.CurrentDirectory, "testing-clf.xgb");
 
             //selectionModel = new ClassificationXGBoostLearner();
             this.selectionModel = ClassificationXGBoostModel.Load(model_path);
+
+            this.simple = new SumIndividualCosts();
+            this.epea = new EPEA_Star(this.simple);
+            this.astar = new A_Star(this.simple);
+            this.macbs = new CBS(this.astar, this.epea, 10);
+            this.icts = new CostTreeSearchSolverOldMatching(3);
+            this.cbs = new CBS(this.astar, this.epea);
+            this.mvc_for_cbs = new MvcHeuristicForCbs();
+
+            //for (int i = 0; i < astar_heuristics.Count; i++)
+            //    astar_heuristics[i].Init(instance, agentList);
+
+            this.cbsh = new CBS(astar, epea,
+                mergeThreshold: -1,
+                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
+                doMalte: false,
+                CBS.ConflictChoice.CARDINAL_MDD,
+                this.mvc_for_cbs,
+                disableTieBreakingByMinOpsEstimate: true,
+                lookaheadMaxExpansions: 1,
+                mergeCausesRestart: true,
+                replanSameCostWithMdd: false,
+                cacheMdds: false,
+                useOldCost: false,
+                useCAT: true);
+
+
         }
 
         /// <summary>
@@ -594,29 +628,11 @@ namespace mapf
             }
         }
 
-        public ISolver solverByIndex(double solverIndex)
+        public ISolver solverByIndex(double solverIndex, ProblemInstance instance)
         {
-            var simple = new SumIndividualCosts();
-            var epea = new EPEA_Star(simple);
-            var astar = new A_Star(simple);
-            var macbs = new CBS(astar, epea, 10);
-            var icts = new CostTreeSearchSolverOldMatching(3);
-            var cbs = new CBS(astar, epea);
-            var mvc_for_cbs = new MvcHeuristicForCbs();
+            List<uint> agentList = Enumerable.Range(0, instance.agents.Length).Select(x => (uint)x).ToList(); // FIXME: Must the heuristics really receive a list of uints?
 
-            var cbsh = new CBS(astar, epea, 
-                mergeThreshold: -1, 
-                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
-                doMalte: false, 
-                CBS.ConflictChoice.CARDINAL_MDD,
-                mvc_for_cbs,
-                disableTieBreakingByMinOpsEstimate: true,
-                lookaheadMaxExpansions: 1,
-                mergeCausesRestart: true,
-                replanSameCostWithMdd: false,
-                cacheMdds: false,
-                useOldCost: false,
-                useCAT: true);
+            simple.Init(instance, agentList);
 
             switch (solverIndex)
             {
@@ -635,6 +651,8 @@ namespace mapf
                 default:
                     return null;
             }
+
+
         }
 
         /// <summary>
@@ -647,17 +665,14 @@ namespace mapf
             ISolver relevantSolver = this.groupSolver;
             if (this.allAgentsState.Length == 1)
                 relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            // the code that you want to measure comes here
-            var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
-            watch.Stop();
-            var elapsedMs = watch.ElapsedMilliseconds;
-            Console.WriteLine("Selection time: {0}", elapsedMs);
+            else
+            {
+                var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
 
-            Console.WriteLine(solverNameByIndex(pred));
-            relevantSolver = solverByIndex(pred);
-            relevantSolver.Setup(this.instance, runner);
-            //this.sele
+                Console.WriteLine($"-----------------AS in ID-{solverNameByIndex(pred)}-----------------");
+                relevantSolver = solverByIndex(pred, this.instance);
+                relevantSolver.Setup(this.instance, runner); //TODO: Move setup to ctor
+            }
             bool solved = relevantSolver.Solve();
             this.solutionCost = relevantSolver.GetSolutionCost();
             if (solved == false)
@@ -752,7 +767,7 @@ namespace mapf
             {
                 success = this.Solve(runner); 
             }
-                this.instance.parameters.Remove(IndependenceDetection.ILLEGAL_MOVES_KEY);
+            this.instance.parameters.Remove(IndependenceDetection.ILLEGAL_MOVES_KEY);
             this.instance.parameters.Remove(IndependenceDetection.MAXIMUM_COST_KEY);
             if (success == false)
             {

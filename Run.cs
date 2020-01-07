@@ -594,7 +594,7 @@ namespace mapf
            var mvc_for_cbs = new MvcHeuristicForCbs();
 
             // MA - CBS - Global - 10 / (EPEA */ SIC) choosing the first conflict in CBS nodes
-            solvers.Add(new CBS(astar, epea, 10));
+            //solvers.Add(new CBS(astar, epea, 10));
 
             // ICTS + ID+AS 
             solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
