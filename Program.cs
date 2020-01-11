@@ -13,6 +13,8 @@ namespace mapf
     class Program
     {
         public static string RESULTS_FILE_NAME = "Results.csv"; // Overridden by Main
+        public static string METAIDRESULTS_FILE_NAME = "ResultsMETAID.csv"; // Overridden by Main
+
         private static bool onlyReadInstances = false;
 
         /// <summary>
@@ -296,7 +298,7 @@ namespace mapf
             var resultsFileName = System.Guid.NewGuid();
             //Program.RESULTS_FILE_NAME = Process.GetCurrentProcess().ProcessName + ".csv";
             Program.RESULTS_FILE_NAME = resultsFileName + ".csv";
-
+            Program.METAIDRESULTS_FILE_NAME = resultsFileName + "METAID.csv";
             if (System.Diagnostics.Debugger.IsAttached)
             {
                 Constants.MAX_TIME = 300000;

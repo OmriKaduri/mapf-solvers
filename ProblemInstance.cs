@@ -659,6 +659,7 @@ namespace mapf
 
                     if (resultsFileExisted == false)
                         runner.PrintResultsFileHeader();
+
                     runner.CloseResultsFile();
 
                     Console.WriteLine("Starting scen with {0} agents", i);

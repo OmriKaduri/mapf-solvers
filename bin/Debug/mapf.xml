@@ -2698,6 +2698,11 @@
             This holds an open stream to the results file.
             </summary>
         </member>
+        <member name="F:mapf.Run.metaIDResultsWriter">
+            <summary>
+            This holds an open stream to the meta ID results file.
+            </summary>
+        </member>
         <member name="F:mapf.Run.rand">
             <summary>
             EH: I introduced this variable so that debugging and experiments
@@ -2715,7 +2720,7 @@
             </summary>
             <param name="fileName">The name of the results file</param>
         </member>
-        <member name="M:mapf.Run.CloseResultsFile">
+        <member name="M:mapf.Run.CloseResultsFile(System.IO.TextWriter)">
             <summary>
             Closes the results file.
             </summary>
@@ -2780,7 +2785,7 @@
             <param name="solver">The solver</param>
             <param name="instance">The problem instance that will be solved</param>
         </member>
-        <member name="M:mapf.Run.PrintResultsFileHeader">
+        <member name="M:mapf.Run.PrintResultsFileHeader(System.IO.TextWriter)">
             <summary>
             Print the header of the results file
             </summary>
@@ -3010,7 +3015,7 @@
             <param name="runner"></param>
             <returns></returns>
         </member>
-        <member name="M:mapf.IndependenceDetection.JoinGroups(mapf.IndependenceDetectionConflict)">
+        <member name="M:mapf.IndependenceDetection.JoinGroups(mapf.IndependenceDetectionConflict,System.Int32)">
             <summary>
             Join the conflicting groups into a single group
             </summary>
@@ -3047,7 +3052,7 @@
             Returns the plan for the group of agents. This is a collection of Moves for every time step until all the agents reach their goal.
             </summary>
         </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.Join(mapf.IndependenceDetectionAgentsGroup)">
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.Join(mapf.IndependenceDetectionAgentsGroup,System.Int32)">
             <summary>
             Joins this and another group to a single group with all of the agents together.
             </summary>
@@ -3068,6 +3073,11 @@
             <param name="plan"></param>
             <param name="runner"></param>
             <returns></returns>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.OutputIDMetaStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of every ID solver to the given output. 
+            </summary>
         </member>
         <member name="T:mapf.WorldState">
             <summary>

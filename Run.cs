@@ -40,6 +40,12 @@ namespace mapf
         private TextWriter resultsWriter;
 
         /// <summary>
+        /// This holds an open stream to the meta ID results file.
+        /// </summary>
+        public TextWriter metaIDResultsWriter;
+
+
+        /// <summary>
         /// EH: I introduced this variable so that debugging and experiments
         /// can have deterministic results.
         /// </summary>
@@ -58,6 +64,12 @@ namespace mapf
                     this.resultsWriter.Dispose();
                     this.resultsWriter = null;
                 }
+                if (this.metaIDResultsWriter != null)
+                {
+                    this.metaIDResultsWriter.Close();
+                    this.metaIDResultsWriter.Dispose();
+                    this.metaIDResultsWriter = null;
+                }
             }
         }
 
@@ -75,14 +87,27 @@ namespace mapf
             this.resultsWriter = new StreamWriter(fileName, true); // 2nd argument indicates the "append" mode
         }
 
+        public void OpenMetaIDResultsFile()
+        {
+            this.metaIDResultsWriter = new StreamWriter(Program.METAIDRESULTS_FILE_NAME, true); // 2nd argument indicates the "append" mode
+        }
+
+        public void CloseMetaIDResultsFile()
+        {
+            CloseResultsFile(this.metaIDResultsWriter);
+        }
+
         /// <summary>
         /// Closes the results file.
         /// </summary>
-        public void CloseResultsFile()
+        public void CloseResultsFile(TextWriter writer = null)
         {
-            this.resultsWriter.Close();
+            if (writer == null)
+            {
+                writer = this.resultsWriter;
+            }
+            writer.Close();
         }
-
         /// <summary>
         /// All types of algorithms to be run
         /// </summary>
@@ -597,10 +622,10 @@ namespace mapf
             //solvers.Add(new CBS(astar, epea, 10));
 
             // ICTS + ID+AS 
-            solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
+            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
 
             //// EPEA* + ID+AS
-            solvers.Add(new IndependenceDetection(astar, epea,true));
+            //solvers.Add(new IndependenceDetection(astar, epea,true));
 
             // ICTS + ID 
             solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
@@ -608,8 +633,8 @@ namespace mapf
             // EPEA* + ID
             solvers.Add(new IndependenceDetection(astar, epea));
 
-            //Adding CBS-H:
-            solvers.Add(new CBS(astar, astar_with_od, 
+            //Adding CBS-H + ID:
+            solvers.Add(new IndependenceDetection(astar, new CBS(astar, astar_with_od, 
                 mergeThreshold: -1, 
                 CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
                 doMalte: false, 
@@ -621,7 +646,7 @@ namespace mapf
                 replanSameCostWithMdd: false,
                 cacheMdds: false,
                 useOldCost: false,
-                useCAT: true));
+                useCAT: true)));
 
             //Adding CBS-H:
             //mergeThreshold = -1, #CBS-H is with -1, MA-CBS-H is with 10
@@ -861,6 +886,19 @@ namespace mapf
             Console.WriteLine($"Solving {instance}");
             this.PrintProblemStatistics(instance);
 
+            if (!File.Exists(Program.METAIDRESULTS_FILE_NAME))
+            {
+                this.OpenMetaIDResultsFile();
+                this.PrintMetaIDResultsFileHeader();
+                this.ContinueToNextLine(this.metaIDResultsWriter);
+                this.CloseMetaIDResultsFile();
+            }
+
+            this.OpenMetaIDResultsFile();
+            this.PrintProblemStatistics(instance, this.metaIDResultsWriter);
+            this.ContinueToNextLine(this.metaIDResultsWriter);
+            this.CloseMetaIDResultsFile();
+
             // Initializing all heuristics, whereever they're used
             for (int i = 0; i < astar_heuristics.Count; i++)
                 astar_heuristics[i].Init(instance, agentList);
@@ -963,7 +1001,8 @@ namespace mapf
                 
                 Console.WriteLine();
             }
-            this.ContinueToNextLine();
+            this.ContinueToNextLine(this.resultsWriter);
+            
             return solutionCost != -1;
         }
 
@@ -1033,7 +1072,7 @@ namespace mapf
                 }
 
                 Console.WriteLine();
-                this.ContinueToNextLine();
+                this.ContinueToNextLine(this.resultsWriter);
             }
         }
 
@@ -1072,18 +1111,40 @@ namespace mapf
             solver.ClearStatistics();
         }
 
-        private void writeCellToCsv(Object value)
+        private void writeCellToCsv(Object value, TextWriter writer = null)
         {
-            this.resultsWriter.Write(value);
-            this.resultsWriter.Write(Run.RESULTS_DELIMITER);
+            if (writer == null)
+            {
+                writer = this.resultsWriter;
+            }
+            writer.Write(value);
+            writer.Write(Run.RESULTS_DELIMITER);
+        }
+
+        public void PrintMetaIDResultsFileHeader()
+        {
+            List<String> headers = new List<String>(){
+                "GridName", "GridRows", "GridColumns", "NumOfAgents", "NumOfObstacles", "InstanceId",
+                "BranchingFactor","ObstacleDensity", "AvgDistanceToGoal",
+                "MaxDistanceToGoal","MinDistanceToGoal","AvgStartDistances",
+                "AvgGoalDistances","PointsAtSPRatio","Sparsity",
+                "GroupNumber","SolverUsed","SolverRuntime","GroupSize"};
+
+            foreach (String header in headers)
+            {
+                this.writeCellToCsv(header, this.metaIDResultsWriter);
+            }
         }
 
         /// <summary>
         /// Print the header of the results file
         /// </summary>
-        public void PrintResultsFileHeader()
+        public void PrintResultsFileHeader(TextWriter writer = null)
         {
-
+            if(writer == null)
+            {
+                writer = this.resultsWriter;
+            }
             List<String> headers = new List<String>(){
                 "GridName", "GridRows", "GridColumns", "NumOfAgents", "NumOfObstacles", "InstanceId",
                 "BranchingFactor","ObstacleDensity", "AvgDistanceToGoal",
@@ -1092,20 +1153,20 @@ namespace mapf
 
             foreach (string header in headers)
             {
-                this.writeCellToCsv(header);
+                this.writeCellToCsv(header, writer);
             }
 
             foreach (ISolver solver in solvers)
             {
-                this.writeCellToCsv(solver + " Success");
-                this.writeCellToCsv(solver + " Runtime");
-                this.writeCellToCsv(solver + " Solution Cost");
-                solver.OutputStatisticsHeader(this.resultsWriter);
-                this.writeCellToCsv(solver + " Max Group");
-                this.writeCellToCsv(solver + " Solution Depth");
+                this.writeCellToCsv(solver + " Success", writer);
+                this.writeCellToCsv(solver + " Runtime", writer);
+                this.writeCellToCsv(solver + " Solution Cost", writer);
+                solver.OutputStatisticsHeader(writer);
+                this.writeCellToCsv(solver + " Max Group", writer);
+                this.writeCellToCsv(solver + " Solution Depth", writer);
             }
 
-            this.ContinueToNextLine();
+            this.ContinueToNextLine(writer);
         }
 
         /// <summary>
@@ -1134,8 +1195,17 @@ namespace mapf
             //this.resultsWriter.Flush();
         }
 
-        private void PrintProblemStatistics(ProblemInstance instance)
+        public void PrintMetaIDProblemStatistics(ProblemInstance instance)
         {
+            PrintProblemStatistics(instance, this.metaIDResultsWriter);
+        }
+
+        public void PrintProblemStatistics(ProblemInstance instance, TextWriter writer = null)
+        {
+            if (writer == null)
+            {
+                writer = this.resultsWriter;
+            }
             int numberOfAgents = instance.agents.Length;
             int numOfRows = instance.grid.Length;
             int numOfCols = instance.grid[0].Length;
@@ -1144,85 +1214,85 @@ namespace mapf
 
             // Grid Name col:
             if (instance.parameters.ContainsKey(ProblemInstance.GRID_NAME_KEY))
-                this.writeCellToCsv(instance.parameters[ProblemInstance.GRID_NAME_KEY]);
+                this.writeCellToCsv(instance.parameters[ProblemInstance.GRID_NAME_KEY], writer);
             else
-                this.writeCellToCsv("Unknown");
+                this.writeCellToCsv("Unknown", writer);
             
             // Grid Rows col:
             var gridRows = instance.grid.Length;
-            this.resultsWriter.Write(gridRows + RESULTS_DELIMITER);
+            writer.Write(gridRows + RESULTS_DELIMITER);
             instance.AddFeature(gridRows);
             
             // Grid Columns col:
             var gridCols = instance.grid[0].Length;
-            this.resultsWriter.Write(gridCols + RESULTS_DELIMITER);
+            writer.Write(gridCols + RESULTS_DELIMITER);
             instance.AddFeature(gridCols);
 
             // Num Of Agents col:
             var numOfAgents = instance.agents.Length;
-            this.resultsWriter.Write(numOfAgents + RESULTS_DELIMITER);
+            writer.Write(numOfAgents + RESULTS_DELIMITER);
             instance.AddFeature(numOfAgents);
-            
+
             // Num Of Obstacles col:
-            this.resultsWriter.Write(instance.numObstacles + RESULTS_DELIMITER);
+            writer.Write(instance.numObstacles + RESULTS_DELIMITER);
             instance.AddFeature(instance.numObstacles);
             
             // Instance Id col:
-            this.resultsWriter.Write(instance.instanceId + RESULTS_DELIMITER);
+            writer.Write(instance.instanceId + RESULTS_DELIMITER);
 
             // Branching Factor col:
             int numberOfLegalMoves = Constants.ALLOW_DIAGONAL_MOVE ? Move.NUM_DIRECTIONS : Move.NUM_NON_DIAG_MOVES;
             var branchingFactor = Math.Pow(numberOfLegalMoves, numberOfAgents);
-            this.writeCellToCsv(branchingFactor);
+            this.writeCellToCsv(branchingFactor, writer);
             instance.AddFeature(branchingFactor);
 
             // Obstacle Density col:
             var obstacleDensity = (float)numOfObstacles / (float)gridSize;
-            this.writeCellToCsv(obstacleDensity);
+            this.writeCellToCsv(obstacleDensity, writer);
             instance.AddFeature(obstacleDensity);
 
             // AvgDistanceToGoal col:
             var avgDistanceToGoal = instance.agentDistancesToGoal.Average();
-            this.writeCellToCsv(avgDistanceToGoal);
+            this.writeCellToCsv(avgDistanceToGoal, writer);
             instance.AddFeature(avgDistanceToGoal);
 
             // MaxDistanceToGoal col
             var maxDistanceToGoal = instance.agentDistancesToGoal.Max();
-            this.writeCellToCsv(maxDistanceToGoal);
+            this.writeCellToCsv(maxDistanceToGoal, writer);
             instance.AddFeature(maxDistanceToGoal);
 
             // MinDistanceToGoal col
             var minDistanceToGoal = instance.agentDistancesToGoal.Min();
-            this.writeCellToCsv(minDistanceToGoal);
+            this.writeCellToCsv(minDistanceToGoal, writer);
             instance.AddFeature(minDistanceToGoal);
 
             // AvgStartDistances col:
             var avgStartDistances = instance.AverageStartDistances();
-            this.writeCellToCsv(avgStartDistances);
+            this.writeCellToCsv(avgStartDistances, writer);
             instance.AddFeature(avgStartDistances);
 
             // AvgGoalDistances col:
             var avgGoalDistances = instance.AverageGoalDistances();
-            this.writeCellToCsv(avgGoalDistances);
+            this.writeCellToCsv(avgGoalDistances, writer);
             instance.AddFeature(avgGoalDistances);
 
             // PointsAtSPRatio col:
             var sp_ratio = instance.RatioOfPointsAtSP();
-            this.writeCellToCsv(sp_ratio);
+            this.writeCellToCsv(sp_ratio, writer);
             instance.AddFeature(sp_ratio);
 
             //Sparsity
             //df['Sparsity'] = df.apply(lambda x: x['NumOfAgents'] / (x['GridSize'] - x['NumOfObstacles']), axis = 1)
             var sparsity = (double)numOfAgents / (double)(gridSize - numOfObstacles);
-            this.writeCellToCsv(sparsity);
+            this.writeCellToCsv(sparsity, writer);
             instance.AddFeature(sparsity);
 
         }
 
-        private void ContinueToNextLine()
+        private void ContinueToNextLine(TextWriter writer)
         {
-            this.resultsWriter.WriteLine();
-            this.resultsWriter.Flush();
+            writer.WriteLine();
+            writer.Flush();
         }
 
         private void PrintNullStatistics(ISolver solver)
@@ -1251,6 +1321,8 @@ namespace mapf
         }
 
         private Stopwatch watch;
+
+
         public double ElapsedMillisecondsTotal()
         {
             return this.watch.Elapsed.TotalMilliseconds;

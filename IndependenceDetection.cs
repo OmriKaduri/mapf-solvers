@@ -44,6 +44,9 @@ namespace mapf
         private Dictionary<TimedMove, List<int>> conflictAvoidance;
         private int maxSolutionCostFound;
 
+        //Variables for ID + AS
+        private int subproblem_id;
+
         public IndependenceDetection(ISolver singleAgentSolver, ISolver groupSolver, Boolean withSelection = false)
         {
             this.singleAgentSolver = singleAgentSolver;
@@ -74,7 +77,10 @@ namespace mapf
                 this.allGroups.AddLast(
                     new IndependenceDetectionAgentsGroup(
                         this.instance, new AgentState[1] { agentStartState },
-                        this.singleAgentSolver, this.groupSolver));
+                        this.singleAgentSolver, this.groupSolver, runner, 0));
+
+            this.subproblem_id = 0;
+
         }
 
         public virtual String GetName() {
@@ -277,7 +283,8 @@ namespace mapf
                     break;
                 allGroups.Remove(conflict.group1);
                 allGroups.Remove(conflict.group2);
-                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict);
+                this.subproblem_id++;
+                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict, this.subproblem_id);
                 
                 // Solve composite group with A*
                 bool solved = compositeGroup.Solve(runner);
@@ -395,8 +402,8 @@ namespace mapf
                     Debug.WriteLine($"Group2 plan before the merge: ");
                     conflict.group2.GetPlan().PrintPlan();
                 }
-
-                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict);
+                this.subproblem_id++;
+                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict, this.subproblem_id);
 
                 compositeGroup.instance.parameters[CONFLICT_AVOIDANCE] = conflictAvoidance;
 
@@ -438,9 +445,9 @@ namespace mapf
         /// </summary>
         /// <param name="conflict">An object that describes the conflict</param>
         /// <returns>The composite group of agents</returns>
-        protected virtual IndependenceDetectionAgentsGroup JoinGroups(IndependenceDetectionConflict conflict)
+        protected virtual IndependenceDetectionAgentsGroup JoinGroups(IndependenceDetectionConflict conflict, int new_problem_id)
         {
-            return conflict.group1.Join(conflict.group2);
+            return conflict.group1.Join(conflict.group2, new_problem_id);
         }
 
         /// <summary>
@@ -538,7 +545,12 @@ namespace mapf
         private MvcHeuristicForCbs mvc_for_cbs;
         private CBS cbsh;
 
-        public IndependenceDetectionAgentsGroup(ProblemInstance instance, AgentState[] allAgentsState, ISolver singleAgentSolver, ISolver groupSolver)
+
+        private Run runner;
+        private int subproblem_id;
+        private long timeToSolver;
+
+        public IndependenceDetectionAgentsGroup(ProblemInstance instance, AgentState[] allAgentsState, ISolver singleAgentSolver, ISolver groupSolver, Run runner, int subproblem_id)
         {
             this.allAgentsState = allAgentsState;
             this.instance = instance.Subproblem(allAgentsState);
@@ -575,7 +587,9 @@ namespace mapf
                 useOldCost: false,
                 useCAT: true);
 
-
+            this.runner = runner;
+            this.subproblem_id = subproblem_id;
+            this.timeToSolver = 0;
         }
 
         /// <summary>
@@ -588,9 +602,14 @@ namespace mapf
             ISolver relevantSolver = this.groupSolver;
             if (this.allAgentsState.Length == 1)
                 relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
-            
+
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
             relevantSolver.Setup(this.instance, runner);
             bool solved = relevantSolver.Solve();
+            watch.Stop();
+            this.timeToSolver = watch.ElapsedMilliseconds;
+
             this.solutionCost = relevantSolver.GetSolutionCost();
             if (solved == false)
                 return false;
@@ -601,6 +620,14 @@ namespace mapf
             this.generated = relevantSolver.GetGenerated();
             this.depthOfSolution = relevantSolver.GetSolutionDepth();
 
+            //TODO: Add print stastistics to different writer - writer of ID metadata
+
+            this.runner.OpenMetaIDResultsFile();
+            this.runner.PrintMetaIDProblemStatistics(this.instance);
+            OutputIDMetaStatistics(this.runner.metaIDResultsWriter);
+            this.runner.metaIDResultsWriter.WriteLine();
+            this.runner.metaIDResultsWriter.Flush();
+            this.runner.CloseMetaIDResultsFile();
             // Clear memory
             relevantSolver.Clear();
             return true;
@@ -703,14 +730,15 @@ namespace mapf
         /// </summary>
         /// <param name="other"></param>
         /// <returns>A new AgentsGroup object with the agents from both this and the other group</returns>
-        public IndependenceDetectionAgentsGroup Join(IndependenceDetectionAgentsGroup other)
+        public IndependenceDetectionAgentsGroup Join(IndependenceDetectionAgentsGroup other, int new_id)
         {
             AgentState[] joinedAgentStates = new AgentState[allAgentsState.Length + other.allAgentsState.Length];
             this.allAgentsState.CopyTo(joinedAgentStates, 0);
             other.allAgentsState.CopyTo(joinedAgentStates, this.allAgentsState.Length);
             Array.Sort(joinedAgentStates, (x, y) => x.agent.agentNum.CompareTo(y.agent.agentNum));  // Technically could be a merge
 
-            return new IndependenceDetectionAgentsGroup(this.instance, joinedAgentStates, this.singleAgentSolver, this.groupSolver);
+            return new IndependenceDetectionAgentsGroup(this.instance, joinedAgentStates, this.singleAgentSolver, this.groupSolver, this.runner,
+                new_id);
         }
 
         /// <summary>
@@ -765,8 +793,10 @@ namespace mapf
             }
             else
             {
-                success = this.Solve(runner); 
+                success = this.Solve(runner);
             }
+
+
             this.instance.parameters.Remove(IndependenceDetection.ILLEGAL_MOVES_KEY);
             this.instance.parameters.Remove(IndependenceDetection.MAXIMUM_COST_KEY);
             if (success == false)
@@ -815,6 +845,19 @@ namespace mapf
                 }
                 i++;
             }
+        }
+
+
+        /// <summary>
+        /// Prints statistics of every ID solver to the given output. 
+        /// </summary>
+        public void OutputIDMetaStatistics(TextWriter output)//, BsonDocument row)
+        {
+            //"GroupNumber","SolverUsed","SolverRuntime","GroupSize"
+            output.Write(this.subproblem_id + Run.RESULTS_DELIMITER);
+            output.Write(this.groupSolver.GetName() + Run.RESULTS_DELIMITER);
+            output.Write(this.timeToSolver + Run.RESULTS_DELIMITER);
+            output.Write(this.allAgentsState.Length + Run.RESULTS_DELIMITER);
         }
 
         public override string ToString()
