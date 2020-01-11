@@ -627,11 +627,11 @@ namespace mapf
             //// EPEA* + ID+AS
             //solvers.Add(new IndependenceDetection(astar, epea,true));
 
-            // ICTS + ID 
-            solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
+            //// ICTS + ID 
+            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
 
-            // EPEA* + ID
-            solvers.Add(new IndependenceDetection(astar, epea));
+            //// EPEA* + ID
+            //solvers.Add(new IndependenceDetection(astar, epea));
 
             //Adding CBS-H + ID:
             solvers.Add(new IndependenceDetection(astar, new CBS(astar, astar_with_od, 
