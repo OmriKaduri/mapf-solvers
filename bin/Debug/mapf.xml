@@ -3037,7 +3037,7 @@
             <summary>
             Solve the group of agents together.
             </summary>
-            <param name="runner"></param>
+            <param name="myRunner"></param>
             <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
         </member>
         <member name="M:mapf.IndependenceDetectionAgentsGroup.SolveWithSelection(mapf.Run)">

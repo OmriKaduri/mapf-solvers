@@ -560,52 +560,53 @@ namespace mapf
             var model_path = Path.Combine(Environment.CurrentDirectory, "testing-clf.xgb");
 
             //selectionModel = new ClassificationXGBoostLearner();
-            this.selectionModel = ClassificationXGBoostModel.Load(model_path);
+            //this.selectionModel = ClassificationXGBoostModel.Load(model_path);
 
-            this.simple = new SumIndividualCosts();
-            this.epea = new EPEA_Star(this.simple);
-            this.astar = new A_Star(this.simple);
-            this.macbs = new CBS(this.astar, this.epea, 10);
-            this.icts = new CostTreeSearchSolverOldMatching(3);
-            this.cbs = new CBS(this.astar, this.epea);
-            this.mvc_for_cbs = new MvcHeuristicForCbs();
+            //this.simple = new SumIndividualCosts();
+            //this.epea = new EPEA_Star(this.simple);
+            //this.astar = new A_Star(this.simple);
+            //this.macbs = new CBS(this.astar, this.epea, 10);
+            //this.icts = new CostTreeSearchSolverOldMatching(3);
+            //this.cbs = new CBS(this.astar, this.epea);
+            //this.mvc_for_cbs = new MvcHeuristicForCbs();
 
-            //for (int i = 0; i < astar_heuristics.Count; i++)
-            //    astar_heuristics[i].Init(instance, agentList);
+            ////for (int i = 0; i < astar_heuristics.Count; i++)
+            ////    astar_heuristics[i].Init(instance, agentList);
 
-            this.cbsh = new CBS(astar, epea,
-                mergeThreshold: -1,
-                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
-                doMalte: false,
-                CBS.ConflictChoice.CARDINAL_MDD,
-                this.mvc_for_cbs,
-                disableTieBreakingByMinOpsEstimate: true,
-                lookaheadMaxExpansions: 1,
-                mergeCausesRestart: true,
-                replanSameCostWithMdd: false,
-                cacheMdds: false,
-                useOldCost: false,
-                useCAT: true);
+            //this.cbsh = new CBS(astar, epea,
+            //    mergeThreshold: -1,
+            //    CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
+            //    doMalte: false,
+            //    CBS.ConflictChoice.CARDINAL_MDD,
+            //    this.mvc_for_cbs,
+            //    disableTieBreakingByMinOpsEstimate: true,
+            //    lookaheadMaxExpansions: 1,
+            //    mergeCausesRestart: true,
+            //    replanSameCostWithMdd: false,
+            //    cacheMdds: false,
+            //    useOldCost: false,
+            //    useCAT: true);
 
-            this.runner = runner;
-            this.subproblem_id = subproblem_id;
-            this.timeToSolver = 0;
+            ////this.runner = runner;
+            //this.subproblem_id = subproblem_id;
+            //this.timeToSolver = 0;
         }
 
         /// <summary>
         /// Solve the group of agents together.
         /// </summary>
-        /// <param name="runner"></param>
+        /// <param name="myRunner"></param>
         /// <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
-        public bool Solve(Run runner)
+        public bool Solve(Run myRunner)
         {
             ISolver relevantSolver = this.groupSolver;
+
             if (this.allAgentsState.Length == 1)
                 relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            relevantSolver.Setup(this.instance, runner);
+            relevantSolver.Setup(this.instance, myRunner);
             bool solved = relevantSolver.Solve();
             watch.Stop();
             this.timeToSolver = watch.ElapsedMilliseconds;
@@ -622,12 +623,12 @@ namespace mapf
 
             //TODO: Add print stastistics to different writer - writer of ID metadata
 
-            this.runner.OpenMetaIDResultsFile();
-            this.runner.PrintMetaIDProblemStatistics(this.instance);
-            OutputIDMetaStatistics(this.runner.metaIDResultsWriter);
-            this.runner.metaIDResultsWriter.WriteLine();
-            this.runner.metaIDResultsWriter.Flush();
-            this.runner.CloseMetaIDResultsFile();
+            myRunner.OpenMetaIDResultsFile();
+            myRunner.PrintMetaIDProblemStatistics(this.instance);
+            OutputIDMetaStatistics(myRunner.metaIDResultsWriter);
+            myRunner.metaIDResultsWriter.WriteLine();
+            myRunner.metaIDResultsWriter.Flush();
+            myRunner.CloseMetaIDResultsFile();
             // Clear memory
             relevantSolver.Clear();
             return true;
@@ -678,8 +679,6 @@ namespace mapf
                 default:
                     return null;
             }
-
-
         }
 
         /// <summary>

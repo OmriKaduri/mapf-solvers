@@ -628,25 +628,25 @@ namespace mapf
             //solvers.Add(new IndependenceDetection(astar, epea,true));
 
             //// ICTS + ID 
-            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
+            solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
 
             //// EPEA* + ID
-            //solvers.Add(new IndependenceDetection(astar, epea));
+            solvers.Add(new IndependenceDetection(astar, epea));
 
             //Adding CBS-H + ID:
-            solvers.Add(new IndependenceDetection(astar, new CBS(astar, astar_with_od, 
-                mergeThreshold: -1, 
-                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
-                doMalte: false, 
-                CBS.ConflictChoice.CARDINAL_MDD,
-                mvc_for_cbs,
-                disableTieBreakingByMinOpsEstimate: true,
-                lookaheadMaxExpansions: 1,
-                mergeCausesRestart: true,
-                replanSameCostWithMdd: false,
-                cacheMdds: false,
-                useOldCost: false,
-                useCAT: true)));
+            //solvers.Add(new IndependenceDetection(astar, new CBS(astar, astar_with_od, 
+            //    mergeThreshold: -1, 
+            //    CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
+            //    doMalte: false, 
+            //    CBS.ConflictChoice.CARDINAL_MDD,
+            //    mvc_for_cbs,
+            //    disableTieBreakingByMinOpsEstimate: true,
+            //    lookaheadMaxExpansions: 1,
+            //    mergeCausesRestart: true,
+            //    replanSameCostWithMdd: false,
+            //    cacheMdds: false,
+            //    useOldCost: false,
+            //    useCAT: true)));
 
             //Adding CBS-H:
             //mergeThreshold = -1, #CBS-H is with -1, MA-CBS-H is with 10
