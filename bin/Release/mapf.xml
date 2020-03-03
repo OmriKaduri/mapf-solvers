@@ -4,6 +4,57 @@
         <name>mapf</name>
     </assembly>
     <members>
+        <member name="F:mapf.AdditivePDBs.excludedAgents">
+            <summary>
+            The set of agents that are not covered by this set of pattern
+            databases. This information is not used by this class or any of its
+            related classes, but is simply precomputed as useful information for
+            the caller (for example, if the caller wanted to add to our
+            heuristic estimate).
+            </summary>
+        </member>
+        <member name="M:mapf.AdditivePDBs.build(mapf.ProblemInstance,mapf.WorldState)">
+            <summary>
+            Determines how many additive pattern databases to build and divides
+            the agents among them, possibly leaving some agents out.
+            </summary>
+            <param name="pi">the problem instance to use</param>
+            <param name="s">The root of the search tree. This is also expected
+            to have context parameters such as agents' goal states.</param>
+        </member>
+        <member name="M:mapf.AdditivePDBs.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
+            <summary>
+            Initializes the pattern database by storing references to the
+            problem instance and also the subset of agents that the pattern
+            database pertains to.
+            </summary>
+            <param name="pi">The problem instance.</param>
+            <param name="vAgents">The agents that the pattern database should keep track of.</param>
+        </member>
+        <member name="M:mapf.AdditivePDBs.h(mapf.WorldState)">
+            <summary>
+            Simply returns the sum of each of the additive pattern database 
+            heuristic estimates on the given state.
+            </summary>
+            <param name="s">The state.</param>
+            <returns>The admissible heuristic value for the additive pattern
+            databases.</returns>
+        </member>
+        <member name="M:mapf.AdditivePDBs.OutputStatisticsHeader(System.IO.TextWriter)">
+            <summary>
+            Prints header of statistics of a single run to the given output. 
+            </summary>
+        </member>
+        <member name="M:mapf.AdditivePDBs.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output.
+            </summary>
+        </member>
+        <member name="M:mapf.AdditivePDBs.ClearStatistics">
+            <summary>
+            Clears statistics.
+            </summary>
+        </member>
         <member name="F:mapf.AgentState.h">
             <summary>
             Only used when AgentState objects are put in the open list priority queue - mainly in AStarForSingleAgent, I think.
@@ -79,6 +130,30 @@
             Used when AgentState objects are put in the open list priority queue - mainly in AStarForSingleAgent, I think.
             </summary>
             <param name="other"></param>
+            <returns></returns>
+        </member>
+        <member name="T:mapf.ApproximateMvcHeuristicForCbs">
+            <summary>
+            Uses the half the size of the 2-approximation of the MVC of the cardinal conflict graph as a
+            heuristic. Builds fewer MDDs when the lazy method is used, and, of course, runs faster than
+            brute-forcing the MVC.
+            </summary>
+        </member>
+        <member name="M:mapf.ApproximateMvcHeuristicForCbs.h(mapf.CbsNode)">
+            <summary>
+            Compute h value with an approximate minimum vertex cover solver.
+            This heuristic is bounded by the maximal matching of the graph.
+            Assumes the s.cbs.mergeThreshold is -1.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.ApproximateMvcHeuristicForCbs.h(mapf.CbsNode,System.Int32)">
+            <summary>
+            Lazy version - only builds MDDs if it has to, and only computes the heuristic up to the
+            target value.
+            </summary>
+            <param name="s"></param>
+            <param name="target"></param>
             <returns></returns>
         </member>
         <member name="T:mapf.A_Star">
@@ -277,46 +352,128 @@
             - Insert the generated nodes to the hashtable of nodes, currently implmented together with the closed list.
             </summary>
         </member>
-        <member name="T:mapf.CooperativeAStar">
+        <member name="T:mapf.A_Star_WithRID">
             <summary>
-            Runs David Silver's Cooperative A* (CA*).
-            It doesn't find optimal solutions and isn't complete.
+            This Solver runs A* but from time to time tries to solve completely the expanded node
+            using Standley's independence detection.
             </summary>
         </member>
-        <member name="F:mapf.CooperativeAStar.reservationTable">
+        <member name="T:mapf.BinaryHeap`1">
             <summary>
-            The Reservation Table
+            A binary heap, useful for sorting data and priority queues.
             </summary>
         </member>
-        <member name="F:mapf.CooperativeAStar.parked">
+        <member name="M:mapf.BinaryHeap`1.#ctor">
             <summary>
-            Maps locations (moves) to the time an agent parked there. From that point on they're
-            blocked.
+            Creates a new binary heap.
             </summary>
         </member>
-        <member name="M:mapf.CooperativeAStar.OutputStatistics(System.IO.TextWriter)">
+        <member name="M:mapf.BinaryHeap`1.#ctor(System.Int32)">
             <summary>
-            Prints statistics of a single run to the given output. 
+            Creates a new binary heap with the specified initial capacity.
             </summary>
         </member>
-        <member name="T:mapf.PEA_Star">
+        <member name="M:mapf.BinaryHeap`1.#ctor(`0[],System.Int32)">
             <summary>
-            Only keeps generated nodes that have the same f as the parent.
-            The parent is then re-inserted with the lowest f from its discarded children
-            (Yoshizumi, Miura, and Ishida 2000)
+            Creates a new binary heap from the given array.
             </summary>
         </member>
-        <member name="F:mapf.PEA_Star.nextFvalue">
+        <member name="M:mapf.BinaryHeap`1.#ctor(System.Collections.Generic.IReadOnlyCollection{`0})">
             <summary>
-            The lowest discarded F
+            Creates a new binary heap from the given collection.
             </summary>
         </member>
-        <member name="M:mapf.PEA_Star.ProcessGeneratedNode(mapf.WorldState)">
+        <member name="P:mapf.BinaryHeap`1.Count">
             <summary>
-            Adds nodes of target F only
+            Gets the number of values in the heap. 
             </summary>
-            <param name="currentNode"></param>
+        </member>
+        <member name="P:mapf.BinaryHeap`1.Capacity">
+            <summary>
+            Gets or sets the capacity of the heap.
+            Can only set it to values larger than the current capacity.
+            </summary>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Peek">
+            <summary>
+            Gets the first value in the heap without removing it.
+            </summary>
+            <returns>The lowest value of type TValue.</returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Clear">
+            <summary>
+            Removes all items from the heap.
+            </summary>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Add(`0)">
+            <summary>
+            Adds a key and value to the heap.
+            </summary>
+            <param name="item">The item to add to the heap.</param>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Remove">
+            <summary>
+            Removes and returns the first item in the heap.
+            </summary>
+            <returns>The next item in the heap.</returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Parent(System.Int32)">
+            <summary>
+            helper function that calculates the parent of a node
+            </summary>
+            <param name="index"></param>
+            <returns>-1 if there's no parent (index==0)</returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Child1(System.Int32)">
+            <summary>
+            helper function that calculates the first child of a node
+            </summary>
+            <param name="index"></param>
             <returns></returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Child2(System.Int32)">
+            <summary>
+            helper function that calculates the second child of a node
+            </summary>
+            <param name="index"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Copy">
+            <summary>
+            Creates a new instance of an identical binary heap.
+            </summary>
+            <returns>A BinaryHeap.</returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Contains(`0)">
+            <summary>
+            Checks to see if the binary heap contains the specified item.
+            Uses CompareTo, not the item's binary heap index.
+            First call runs in O(nlogn) time. Next calls are O(logn).
+            </summary>
+            <param name="item">The item to search the binary heap for.</param>
+            <returns>A boolean, true if binary heap contains item.</returns>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies the binary heap to an array at the specified index.
+            </summary>
+            <param name="array">One dimensional array that is the destination of the copied elements.</param>
+            <param name="arrayIndex">The zero-based index at which copying begins.</param>
+        </member>
+        <member name="P:mapf.BinaryHeap`1.IsReadOnly">
+            <summary>
+            Returns whether or not the binary heap is readonly.
+            </summary>
+        </member>
+        <member name="M:mapf.BinaryHeap`1.Remove(`0)">
+            <summary>
+            Removes an item from the binary heap. 
+            Assumes item is or was in the heap. Doesn't use Equality checks.
+            This will not remove duplicates.
+            TODO: Change into Remove(int binaryHeapIndex)!
+            </summary>
+            <param name="item">The item to be removed.</param>
+            <returns>Boolean true if the item was removed.</returns>
         </member>
         <member name="T:mapf.CBS">
             <summary>
@@ -485,6 +642,33 @@
             <param name="problemInstance"></param>
             <param name="runner"></param>
         </member>
+        <member name="F:mapf.CbsConflict.isVertexConflict">
+            <summary>
+            If true, conflict is two agents have same dest, from any direction. Otherwise it's an edge conflict.
+            </summary>
+        </member>
+        <member name="M:mapf.CbsConstraint.Equals(System.Object)">
+            <summary>
+            Checks that the agentNum is equal, and compares the move.
+            If one of the constraints is a query, an instance only created and used to quickly search for a move in a set of constraints,
+            the direction is ignored if the other constraint is a vertex constraint.
+            </summary>
+            <param name="obj"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.CbsConstraint.GetHashCode">
+            <summary>
+            Uses the move and the agents.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.CbsConstraint.Allows(mapf.CbsConstraint)">
+            <summary>
+            Kind of the opposite of Equals: checks that the moves are unequal or that not one of the other's agents appears in this.agents.
+            </summary>
+            <param name="other"></param>
+            <returns></returns>
+        </member>
         <member name="T:mapf.CbsHeuristicForAStar">
             <summary>
             Runs a bounded CBS to get an lower estimate of the cost from a given A* node to the goal.
@@ -559,564 +743,6 @@
             <param name="millisCap"></param>
             <param name="resume"></param>
             <returns></returns>
-        </member>
-        <member name="F:mapf.CbsConflict.isVertexConflict">
-            <summary>
-            If true, conflict is two agents have same dest, from any direction. Otherwise it's an edge conflict.
-            </summary>
-        </member>
-        <member name="M:mapf.ConflictGraph.ApproximateMinimumVertexCover(System.Int32)">
-            <summary>
-            
-            </summary>
-            <param name="prevMVC"></param>
-            <returns>The size of the 2-approximate minimum vertex cover</returns>
-        </member>
-        <member name="M:mapf.ConflictGraph.MinimumVertexCover(System.Int32)">
-            <summary>
-            
-            </summary>
-            <param name="prevMVC"></param>
-            <returns>The size of the minimum vertex cover</returns>
-        </member>
-        <member name="M:mapf.ConflictGraph.KVertexCover(mapf.ConflictGraph,System.Int32,System.Int32)">
-            <summary>
-            Return whether there exists a k-vertex (at most) cover solution (an NP-Complete question).
-            This algorithm theoretically runs in O(2^(k-1)*2*n), or O(2^k*n). It was described in Parameterized
-            Computational Feasibility (Downey and Fellows, 1995).
-            The algorithm with the best asymptotic dependence on k was desribed in Improved
-            Parameterized Upper Bounds for Vertex Cover (Cheng, Kanj and Xia 2006) and has a runtime of
-            O(1.2738^k + kn). Even that algorithm can only find a vertex cover of size up to ~190 in
-            reasonable time.
-            </summary>
-        </member>
-        <member name="T:mapf.DisjointSets`1">
-            <summary>
-            Algorithm from http://en.wikipedia.org/wiki/Disjoint-set_data_structure.
-            Operations cost O(Ackerman^-1(n)) time - practically constant. Cost is asymptotically optimal :)
-            </summary>
-        </member>
-        <member name="M:mapf.DisjointSets`1.#ctor(System.Collections.Generic.ISet{`0})">
-            <summary>
-            Initially all entries are single item sets.
-            </summary>
-            <param name="entries"></param>
-        </member>
-        <member name="M:mapf.DisjointSets`1.AddSet(`0)">
-            <summary>
-            Does nothing if entry is already present.
-            Returns whether the entry was really added now.
-            </summary>
-        </member>
-        <member name="M:mapf.DisjointSets`1.IsSingle(`0)">
-            <summary>
-            Assumes entry is already in the DisjointSets data structure
-            </summary>
-            <param name="entry"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.DisjointSets`1.CopyUnions(mapf.DisjointSets{`0})">
-            <summary>
-            Modifies this data structure to also contains all unions from other.
-            </summary>
-            <param name="other"></param>
-            <returns>Whether this object was changed</returns>
-        </member>
-        <member name="M:mapf.DisjointSets`1.Find(mapf.DisjointSetItem)">
-            <summary>
-            Finds the representative of the item's set
-            </summary>
-            <param name="x"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.DisjointSets`1.Union(`0,`0)">
-            <summary>
-            Doesn't assume x, y already in the data structure.
-            Returns whether they were really only united now.
-            </summary>
-            <param name="entryA"></param>
-            <param name="entryB"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.DisjointSets`1.AreUnited(`0,`0)">
-            <summary>
-            Assumes entries are already in the DisjointSets data structure
-            </summary>
-            <param name="entryA"></param>
-            <param name="entryB"></param>
-            <returns></returns>
-        </member>
-        <member name="P:mapf.IHeuristicSearchNode.hBonus">
-            <summary>
-            Used to mark that heuristic estimate was improved already
-            </summary>
-        </member>
-        <member name="M:mapf.IHeuristicSearchNode.GetTargetH(System.Int32)">
-            <summary>
-            Returns the h needed to set (raise) the node's f to the given value
-            </summary>
-            <param name="f"></param>
-            <returns></returns>
-        </member>
-        <member name="T:mapf.IterativeDeepeningCBS">
-            <summary>
-            Is the CBS open list ever large enough to warrant this?
-            Consider foregoing this implementation. It needs maintainence anyway.
-            </summary>
-        </member>
-        <member name="F:mapf.MddPruningHeuristicForCbs.cache">
-            <summary>
-            Maps a pair of agents and their costs to whether there's a solution with those costs
-            </summary>
-        </member>
-        <member name="M:mapf.MddPruningHeuristicForCbs.h(mapf.CbsNode)">
-            <summary>
-            Returns 0 if the conflict is solvable with the current costs, 1 otherwise. If unsure, returns 0;
-            Currently avoiding building a k-agent MDD.
-            TODO: This became largely irrelevant after we've discovered cardinal conflicts, but
-            now that we're always building all MDDs, it might be worth it to try to sync the MDDs
-            for nodes with no cardinal conflicts. We might find they're still unsolvable
-            with the current costs.
-            </summary>
-            <param name="s"></param>
-            <param name="ignoreConstraints">
-            Ignore constraints. This allows the results for the given costs to be used elsewhere in
-            the CBS tree, but can cause under-estimates and make building the MDD a little slower.
-            </param>
-            <returns>
-            If after syncing and pruning the MDDs at the current costs for the two conflicting agents
-            the whole MDD was pruned, indicating these agents can't be solved at the current cost,
-            returns 1. Else returns 0
-            </returns>
-        </member>
-        <member name="M:mapf.MddPruningHeuristicForCbs.h(mapf.CbsNode,System.Int32)">
-            <summary>
-            Lazy version
-            </summary>
-            <param name="s"></param>
-            <param name="target"></param>
-            <returns></returns>
-        </member>
-        <member name="T:mapf.ApproximateMvcHeuristicForCbs">
-            <summary>
-            Uses the half the size of the 2-approximation of the MVC of the cardinal conflict graph as a
-            heuristic. Builds fewer MDDs when the lazy method is used, and, of course, runs faster than
-            brute-forcing the MVC.
-            </summary>
-        </member>
-        <member name="M:mapf.ApproximateMvcHeuristicForCbs.h(mapf.CbsNode)">
-            <summary>
-            Compute h value with an approximate minimum vertex cover solver.
-            This heuristic is bounded by the maximal matching of the graph.
-            Assumes the s.cbs.mergeThreshold is -1.
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.ApproximateMvcHeuristicForCbs.h(mapf.CbsNode,System.Int32)">
-            <summary>
-            Lazy version - only builds MDDs if it has to, and only computes the heuristic up to the
-            target value.
-            </summary>
-            <param name="s"></param>
-            <param name="target"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.MvcHeuristicForCbs.h(mapf.CbsNode)">
-            <summary>
-            Compute h value with a minimum vertex cover solver.
-            Assumes the s.cbs.mergeThreshold is -1.
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.MvcHeuristicForCbs.h(mapf.CbsNode,System.Int32)">
-            <summary>
-            Lazy version
-            </summary>
-            <param name="s"></param>
-            <param name="target"></param>
-            <returns></returns>
-        </member>
-        <member name="P:mapf.ConflictAvoidanceTable.Keys">
-            <summary>
-            Gets an enumerable collection that contains the keys in the read-only dictionary
-            </summary>
-            <returns>An enumerable collection that contains the keys in the read-only dictionary</returns>
-        </member>
-        <member name="P:mapf.ConflictAvoidanceTable.Values">
-            <summary>
-            Gets an enumerable collection that contains the values in the read-only dictionary
-            </summary>
-            <returns>An enumerable collection that contains the values in the read-only dictionary</returns>
-        </member>
-        <member name="P:mapf.ConflictAvoidanceTable.Item(mapf.TimedMove)">
-            <summary>
-            Gets the element that has the specified key in the read-only dictionary.
-            </summary>
-            <param name="key">The key to locate</param>
-            <returns>The element that has the specified key in the read-only dictionary</returns>
-            <exception cref="T:System.ArgumentNullException">key is null</exception>
-            <exception cref="T:System.Collections.Generic.KeyNotFoundException">The property is retrieved and key is not found</exception>
-        </member>
-        <member name="M:mapf.ConflictAvoidanceTable.ContainsKey(mapf.TimedMove)">
-            <summary>
-            Determines whether the read-only dictionary contains an element that has
-             the specified key.
-            </summary>
-            <param name="key">The key to locate.</param>
-            <returns>true if the read-only dictionary contains an element that has the specified key;
-            otherwise, false.</returns>
-            <exception cref="T:System.ArgumentNullException">key is null</exception>
-        </member>
-        <member name="M:mapf.ConflictAvoidanceTable.TryGetValue(mapf.TimedMove,System.Collections.Generic.List{System.Int32}@)">
-            <summary>
-            Gets the value that is associated with the specified key.
-            </summary>
-            <param name="key">The key to locate</param>
-            <param name="value">
-            When this method returns, the value associated with the specified key, if
-            the key is found; otherwise, the default value for the type of the value
-            parameter. This parameter is passed uninitialized.
-            </param>
-            <exception cref="T:System.ArgumentNullException">key is null</exception>
-            <returns>
-            true if the object that implements the System.Collections.Generic.IReadOnlyDictionary&lt;TKey,TValue&gt;
-            interface contains an element that has the specified key; otherwise, false.
-            </returns>
-        </member>
-        <member name="T:mapf.Dictionary_U`2">
-            <summary>
-            This class represents a union of Dictionaries, which each map <typeparamref name="K"/>
-            to a List of <typeparamref name="V"/>.
-            It is similar to Python's collections.ChainMap, but 1) read-only, 2) a combined list of V
-            elements is returned instead of just the first match.
-            </summary>
-        </member>
-        <member name="P:mapf.Dictionary_U`2.Keys">
-            <summary>
-            Gets an enumerable collection that contains the keys in the read-only dictionary.
-            Warning: May contain duplicates if multiple inner dicts have the same key.
-            </summary>
-            <returns>An enumerable collection that contains the keys in the read-only dictionary.</returns>
-        </member>
-        <member name="P:mapf.Dictionary_U`2.Values">
-            <summary>
-            Gets an enumerable collection that contains the values in the read-only dictionary.
-            </summary>
-            <returns>
-            An enumerable collection that contains the values in the read-only dictionary.
-            </returns>
-        </member>
-        <member name="P:mapf.Dictionary_U`2.Item(`0)">
-            <summary>
-            Gets a combined list of the values mapped to the specified key in the combined dictionaries.
-            </summary>
-            <param name="key">The key to locate.</param>
-            <returns>A combined list of the values mapped to the specified key in combined dictionaries.</returns>
-            <exception cref="T:System.ArgumentNullException">key is null.</exception>
-            <exception cref="T:System.Collections.Generic.KeyNotFoundException">key is not found.</exception>
-        </member>
-        <member name="M:mapf.Dictionary_U`2.TryGetValue(`0,System.Collections.Generic.List{`1}@)">
-            <summary>
-            Gets a combined list of values mapped to the specified key in the combined dictionaries, or null if none
-            are found.
-            </summary>
-            <param name="key"></param>
-            <param name="value"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.Dictionary_U`2.ContainsKey(`0)">
-            <summary>
-            Returns whether the specified key exists in any of the combined dictionaries
-            </summary>
-            <param name="key">The key to look for</param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.Dictionary_U`2.Clear">
-            <summary>
-            Remove all dictionaries from the union
-            </summary>
-        </member>
-        <member name="M:mapf.Dictionary_U`2.Join(System.Collections.Generic.IReadOnlyDictionary{`0,System.Collections.Generic.List{`1}})">
-            <summary>
-            Add a dictionary to the union
-            </summary>
-            <param name="other">the dictionary to add</param>
-        </member>
-        <member name="M:mapf.Dictionary_U`2.Separate(System.Collections.Generic.IReadOnlyDictionary{`0,System.Collections.Generic.List{`1}})">
-            <summary>
-            Remove a dictionary from the union
-            </summary>
-            <param name="other">the dictionary to add</param>
-        </member>
-        <member name="M:mapf.Dictionary_U`2.Print">
-            <summary>
-            Not used.
-            </summary>
-        </member>
-        <member name="P:mapf.Dictionary_U`2.Count">
-            <summary>
-            Gets the number of keys in the Dictionary. 
-            </summary>
-        </member>
-        <member name="M:mapf.IStatisticsCsvWriter.OutputStatisticsHeader(System.IO.TextWriter)">
-            <summary>
-            Prints header of statistics of a single run to the given output. 
-            </summary>
-        </member>
-        <member name="M:mapf.IStatisticsCsvWriter.OutputStatistics(System.IO.TextWriter)">
-            <summary>
-            Prints statistics of a single run to the given output.
-            </summary>
-        </member>
-        <member name="P:mapf.IStatisticsCsvWriter.NumStatsColumns">
-            <summary>
-            To fill out them out when an algorithm isn't run
-            </summary>
-        </member>
-        <member name="M:mapf.IStatisticsCsvWriter.ClearStatistics">
-            <summary>
-            Clears statistics.
-            </summary>
-        </member>
-        <member name="T:mapf.OpenList`1">
-            <summary>
-            Supporting O(1) insertion and removal of items that compare equal to the top of the heap.
-            TODO: Compare against a bucketed implementation where all equal costs are bucketed in a queue,
-                  even though it might not respect all tie-breaking (but still prioritizes goal nodes).
-            </summary>
-        </member>
-        <member name="M:mapf.OpenList`1.Remove(`0)">
-            <summary>
-            Uses Equality check only for removing from the queue.
-            Might cost O(n) if all items are in the queue and not the heap.
-            </summary>
-            <param name="item"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.OpenList`1.Contains(`0)">
-            <summary>
-            Assumes item was added to the open list in the past
-            </summary>
-            <param name="item"></param>
-            <returns></returns>
-        </member>
-        <member name="T:mapf.DynamicLazyOpenList`1">
-            <summary>
-            This open list invokes an expensive-to-compute heuristic on items before they're removed,
-            potentially pushing them back into itself if their F value increased above the next item in
-            the list.
-            The heuristic is given the "target value" - the minimum estimate that would cause an item to
-            be pushed back, and is allowed to stop once this estimate was reached.
-            </summary>
-            <typeparam name="Item"></typeparam>
-        </member>
-        <member name="M:mapf.RandomChoiceOfHeuristic`1.#ctor(mapf.IHeuristicCalculator{`0},mapf.IHeuristicCalculator{`0},System.Double,System.Int32)">
-            <summary>
-            
-            </summary>
-            <param name="first"></param>
-            <param name="second"></param>
-            <param name="p"></param>
-            <param name="seed"></param>
-        </member>
-        <member name="M:mapf.HashSet_U`1.Clear">
-            <summary>
-            Hardly used.
-            </summary>
-        </member>
-        <member name="M:mapf.HashSet_U`1.Print">
-            <summary>
-            Not used.
-            </summary>
-        </member>
-        <member name="P:mapf.HashSet_U`1.Count">
-            <summary>
-            Gets the number of values in the HashSet. 
-            </summary>
-        </member>
-        <member name="T:mapf.IBinaryHeapItem">
-            <summary>
-            represents items that are stored in the binary heap
-            </summary>
-        </member>
-        <member name="M:mapf.IBinaryHeapItem.GetIndexInHeap">
-            <summary>
-            The index of the item in the binary heap
-            </summary>
-        </member>
-        <member name="T:mapf.BinaryHeap`1">
-            <summary>
-            A binary heap, useful for sorting data and priority queues.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.#ctor">
-            <summary>
-            Creates a new binary heap.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.#ctor(System.Int32)">
-            <summary>
-            Creates a new binary heap with the specified initial capacity.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.#ctor(`0[],System.Int32)">
-            <summary>
-            Creates a new binary heap from the given array.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.#ctor(System.Collections.Generic.IReadOnlyCollection{`0})">
-            <summary>
-            Creates a new binary heap from the given collection.
-            </summary>
-        </member>
-        <member name="P:mapf.BinaryHeap`1.Count">
-            <summary>
-            Gets the number of values in the heap. 
-            </summary>
-        </member>
-        <member name="P:mapf.BinaryHeap`1.Capacity">
-            <summary>
-            Gets or sets the capacity of the heap.
-            Can only set it to values larger than the current capacity.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Peek">
-            <summary>
-            Gets the first value in the heap without removing it.
-            </summary>
-            <returns>The lowest value of type TValue.</returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Clear">
-            <summary>
-            Removes all items from the heap.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Add(`0)">
-            <summary>
-            Adds a key and value to the heap.
-            </summary>
-            <param name="item">The item to add to the heap.</param>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Remove">
-            <summary>
-            Removes and returns the first item in the heap.
-            </summary>
-            <returns>The next item in the heap.</returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Parent(System.Int32)">
-            <summary>
-            helper function that calculates the parent of a node
-            </summary>
-            <param name="index"></param>
-            <returns>-1 if there's no parent (index==0)</returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Child1(System.Int32)">
-            <summary>
-            helper function that calculates the first child of a node
-            </summary>
-            <param name="index"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Child2(System.Int32)">
-            <summary>
-            helper function that calculates the second child of a node
-            </summary>
-            <param name="index"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Copy">
-            <summary>
-            Creates a new instance of an identical binary heap.
-            </summary>
-            <returns>A BinaryHeap.</returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Contains(`0)">
-            <summary>
-            Checks to see if the binary heap contains the specified item.
-            Uses CompareTo, not the item's binary heap index.
-            First call runs in O(nlogn) time. Next calls are O(logn).
-            </summary>
-            <param name="item">The item to search the binary heap for.</param>
-            <returns>A boolean, true if binary heap contains item.</returns>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.CopyTo(`0[],System.Int32)">
-            <summary>
-            Copies the binary heap to an array at the specified index.
-            </summary>
-            <param name="array">One dimensional array that is the destination of the copied elements.</param>
-            <param name="arrayIndex">The zero-based index at which copying begins.</param>
-        </member>
-        <member name="P:mapf.BinaryHeap`1.IsReadOnly">
-            <summary>
-            Returns whether or not the binary heap is readonly.
-            </summary>
-        </member>
-        <member name="M:mapf.BinaryHeap`1.Remove(`0)">
-            <summary>
-            Removes an item from the binary heap. 
-            Assumes item is or was in the heap. Doesn't use Equality checks.
-            This will not remove duplicates.
-            TODO: Change into Remove(int binaryHeapIndex)!
-            </summary>
-            <param name="item">The item to be removed.</param>
-            <returns>Boolean true if the item was removed.</returns>
-        </member>
-        <member name="F:mapf.AdditivePDBs.excludedAgents">
-            <summary>
-            The set of agents that are not covered by this set of pattern
-            databases. This information is not used by this class or any of its
-            related classes, but is simply precomputed as useful information for
-            the caller (for example, if the caller wanted to add to our
-            heuristic estimate).
-            </summary>
-        </member>
-        <member name="M:mapf.AdditivePDBs.build(mapf.ProblemInstance,mapf.WorldState)">
-            <summary>
-            Determines how many additive pattern databases to build and divides
-            the agents among them, possibly leaving some agents out.
-            </summary>
-            <param name="pi">the problem instance to use</param>
-            <param name="s">The root of the search tree. This is also expected
-            to have context parameters such as agents' goal states.</param>
-        </member>
-        <member name="M:mapf.AdditivePDBs.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
-            <summary>
-            Initializes the pattern database by storing references to the
-            problem instance and also the subset of agents that the pattern
-            database pertains to.
-            </summary>
-            <param name="pi">The problem instance.</param>
-            <param name="vAgents">The agents that the pattern database should keep track of.</param>
-        </member>
-        <member name="M:mapf.AdditivePDBs.h(mapf.WorldState)">
-            <summary>
-            Simply returns the sum of each of the additive pattern database 
-            heuristic estimates on the given state.
-            </summary>
-            <param name="s">The state.</param>
-            <returns>The admissible heuristic value for the additive pattern
-            databases.</returns>
-        </member>
-        <member name="M:mapf.AdditivePDBs.OutputStatisticsHeader(System.IO.TextWriter)">
-            <summary>
-            Prints header of statistics of a single run to the given output. 
-            </summary>
-        </member>
-        <member name="M:mapf.AdditivePDBs.OutputStatistics(System.IO.TextWriter)">
-            <summary>
-            Prints statistics of a single run to the given output.
-            </summary>
-        </member>
-        <member name="M:mapf.AdditivePDBs.ClearStatistics">
-            <summary>
-            Clears statistics.
-            </summary>
-        </member>
-        <member name="T:mapf.IndependenceDetectionConflict">
-            <summary>
-            This class represents a conflict between two groups of agents in Trevor Standley's
-            Indepedence Detection algorithm.
-            </summary>
         </member>
         <member name="F:mapf.CbsNode.minimumVertexCover">
             <summary>
@@ -1579,27 +1205,780 @@
             </summary>
             <returns></returns>
         </member>
-        <member name="M:mapf.CbsConstraint.Equals(System.Object)">
+        <member name="P:mapf.ConflictAvoidanceTable.Keys">
             <summary>
-            Checks that the agentNum is equal, and compares the move.
-            If one of the constraints is a query, an instance only created and used to quickly search for a move in a set of constraints,
-            the direction is ignored if the other constraint is a vertex constraint.
+            Gets an enumerable collection that contains the keys in the read-only dictionary
             </summary>
-            <param name="obj"></param>
+            <returns>An enumerable collection that contains the keys in the read-only dictionary</returns>
+        </member>
+        <member name="P:mapf.ConflictAvoidanceTable.Values">
+            <summary>
+            Gets an enumerable collection that contains the values in the read-only dictionary
+            </summary>
+            <returns>An enumerable collection that contains the values in the read-only dictionary</returns>
+        </member>
+        <member name="P:mapf.ConflictAvoidanceTable.Item(mapf.TimedMove)">
+            <summary>
+            Gets the element that has the specified key in the read-only dictionary.
+            </summary>
+            <param name="key">The key to locate</param>
+            <returns>The element that has the specified key in the read-only dictionary</returns>
+            <exception cref="T:System.ArgumentNullException">key is null</exception>
+            <exception cref="T:System.Collections.Generic.KeyNotFoundException">The property is retrieved and key is not found</exception>
+        </member>
+        <member name="M:mapf.ConflictAvoidanceTable.ContainsKey(mapf.TimedMove)">
+            <summary>
+            Determines whether the read-only dictionary contains an element that has
+             the specified key.
+            </summary>
+            <param name="key">The key to locate.</param>
+            <returns>true if the read-only dictionary contains an element that has the specified key;
+            otherwise, false.</returns>
+            <exception cref="T:System.ArgumentNullException">key is null</exception>
+        </member>
+        <member name="M:mapf.ConflictAvoidanceTable.TryGetValue(mapf.TimedMove,System.Collections.Generic.List{System.Int32}@)">
+            <summary>
+            Gets the value that is associated with the specified key.
+            </summary>
+            <param name="key">The key to locate</param>
+            <param name="value">
+            When this method returns, the value associated with the specified key, if
+            the key is found; otherwise, the default value for the type of the value
+            parameter. This parameter is passed uninitialized.
+            </param>
+            <exception cref="T:System.ArgumentNullException">key is null</exception>
+            <returns>
+            true if the object that implements the System.Collections.Generic.IReadOnlyDictionary&lt;TKey,TValue&gt;
+            interface contains an element that has the specified key; otherwise, false.
+            </returns>
+        </member>
+        <member name="M:mapf.ConflictGraph.ApproximateMinimumVertexCover(System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="prevMVC"></param>
+            <returns>The size of the 2-approximate minimum vertex cover</returns>
+        </member>
+        <member name="M:mapf.ConflictGraph.MinimumVertexCover(System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="prevMVC"></param>
+            <returns>The size of the minimum vertex cover</returns>
+        </member>
+        <member name="M:mapf.ConflictGraph.KVertexCover(mapf.ConflictGraph,System.Int32,System.Int32)">
+            <summary>
+            Return whether there exists a k-vertex (at most) cover solution (an NP-Complete question).
+            This algorithm theoretically runs in O(2^(k-1)*2*n), or O(2^k*n). It was described in Parameterized
+            Computational Feasibility (Downey and Fellows, 1995).
+            The algorithm with the best asymptotic dependence on k was desribed in Improved
+            Parameterized Upper Bounds for Vertex Cover (Cheng, Kanj and Xia 2006) and has a runtime of
+            O(1.2738^k + kn). Even that algorithm can only find a vertex cover of size up to ~190 in
+            reasonable time.
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.NO_SOLUTION_COST">
+            <summary>
+            The cost that is set to the algorithms when all the states have been expanded and no goal was found 
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.TIMEOUT_COST">
+            <summary>
+            The cost that is set to the algorithms when they are halted due to out of time 
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.MAX_MEMORY_COST">
+            <summary>
+            The cost that is set to the algorithms when they are halted due to out of memory
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.GENERATED_PER_PRINT">
+            <summary>
+            The number of generated nodes after which a debug print will be given
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.PRIMES_FOR_HASHING">
+            <summary>
+            Prime numbers for hashing
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.MAX_FAIL_COUNT">
+            <summary>
+            Max Consecutive failures before an algorithm is omitted from the list of tested algorithms
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.EXHAUSTIVE_ICTS">
+            <summary>
+            This determines whether the ICTS should search for a solution with lowest conflicts for the ID framework
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.ALLOW_HEAD_ON_COLLISION">
+            <summary>
+            Allow head-on collisions
+            </summary>
+        </member>
+        <member name="F:mapf.Constants.ALLOW_DIAGONAL_MOVE">
+            <summary>
+            FIXME: Diagonal move support should count their cost as sqrt(2)
+            </summary>
+        </member>
+        <member name="T:mapf.CooperativeAStar">
+            <summary>
+            Runs David Silver's Cooperative A* (CA*).
+            It doesn't find optimal solutions and isn't complete.
+            </summary>
+        </member>
+        <member name="F:mapf.CooperativeAStar.reservationTable">
+            <summary>
+            The Reservation Table
+            </summary>
+        </member>
+        <member name="F:mapf.CooperativeAStar.parked">
+            <summary>
+            Maps locations (moves) to the time an agent parked there. From that point on they're
+            blocked.
+            </summary>
+        </member>
+        <member name="M:mapf.CooperativeAStar.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output. 
+            </summary>
+        </member>
+        <member name="T:mapf.CostTreeNodeSolver">
+            <summary>
+            This class tries to find a solution to a problem instance of a given cost. 
+            (this is used in the CostTreeSearchSolver)
+            </summary>
+        </member>
+        <member name="M:mapf.CostTreeNodeSolver.#ctor(mapf.ProblemInstance,mapf.Run,mapf.CostTreeSearchSolver,System.Int32[],mapf.CostTreeNode)">
+            <summary>
+            
+            </summary>
+            <param name="problem"></param>
+            <param name="runner"></param>
+            <param name="solver"></param>
+            <param name="agentNums"></param>
+            <param name="costsNode">Of all the agents, not just the ones selected</param>
+        </member>
+        <member name="M:mapf.CostTreeNodeSolver.#ctor(mapf.ProblemInstance,mapf.CostTreeNode,mapf.Run,mapf.CostTreeSearchSolver)">
+            <summary>
+            Automatically calls Setup with the given costsNode
+            </summary>
+            <param name="problem"></param>
+            <param name="costNode">TODO: Maybe just pass the array of costs here?</param>
+            <param name="runner"></param>
+            <param name="solver"></param>
+        </member>
+        <member name="M:mapf.CostTreeNodeSolver.Solve(System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}},System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}})">
+            <summary>
+            Tries to find a solution for the agents with the given cost.
+            </summary>
+            <returns>The solution if found or null otherwise</returns>
+        </member>
+        <member name="T:mapf.CostTreeNodeSolverOldMatching">
+            <summary>
+            Use this one!
+            </summary>
+        </member>
+        <member name="F:mapf.CostTreeNodeSolverOldMatching.syncSize">
+            <summary>
+            Currently the only supported values are 3 and non-3. This is equivalent to bool checkTriples.
+            </summary>
+        </member>
+        <member name="M:mapf.CostTreeNodeSolverOldMatching.Solve(System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}},System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}})">
+            <summary>
+            Prunes the individual agent MDDs and, if possible, matches them to return a non-conflicting configuration of
+            paths of the given costs.
+            </summary>
+            <param name="ID_CAT"></param>
+            <param name="CBS_CAT"></param>
+            <returns>
+            null if no solution is found.
+            </returns>
+        </member>
+        <member name="M:mapf.CostTreeNodeSolverOldMatching.Prune">
+            <summary>
+            Prunes the individual agent MDDs and prepares data for matching them
+            </summary>
+            <returns>Whether everything was pruned</returns>
+        </member>
+        <member name="T:mapf.CostTreeSearchSolver">
+            <summary>
+            This class solves an instance of the MAPF problem using the increasing costs tree search algorithm.
+            </summary>
+        </member>
+        <member name="M:mapf.CostTreeSearchSolver.GetName">
+            <summary>
+            Return the name of the solver, useful for outputting results.
+            </summary>
+            <returns>The name of the solver</returns>
+        </member>
+        <member name="M:mapf.CostTreeSearchSolver.Setup(mapf.ProblemInstance,System.Int32,mapf.Run,System.Int32,System.Int32,mapf.MDD)">
+            <summary>
+            Setup the relevant data structures for a run.
+            </summary>
+            <param name="problemInstance"></param>
+            <param name="minTimeStep"></param>
+            <param name="runner"></param>
+            <param name="minCost">FIXME: Not taken into account, just added to comply with ICbsSolver</param>
+            <param name="maxCost">FIXME: Not taken into account, just added to comply with ICbsSolver</param>
+            <param name="mdd">FIXME: Not taken into account, just added to comply with ICbsSolver</param>
+        </member>
+        <member name="M:mapf.CostTreeSearchSolver.Clear">
+            <summary>
+            Clears the relevant data structures and variables to free memory usage.
+            </summary>
+        </member>
+        <member name="M:mapf.CostTreeSearchSolver.GetSolutionCost">
+            <summary>
+            Returns the cost of the solution found, or error codes otherwise.
+            </summary>
+        </member>
+        <member name="M:mapf.CostTreeSearchSolver.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output. 
+            </summary>
+        </member>
+        <member name="M:mapf.CostTreeSearchSolver.Solve">
+            <summary>
+            Solves the instance that was set by a call to Setup()
+            </summary>
             <returns></returns>
         </member>
-        <member name="M:mapf.CbsConstraint.GetHashCode">
+        <member name="T:mapf.Dictionary_U`2">
             <summary>
-            Uses the move and the agents.
+            This class represents a union of Dictionaries, which each map <typeparamref name="K"/>
+            to a List of <typeparamref name="V"/>.
+            It is similar to Python's collections.ChainMap, but 1) read-only, 2) a combined list of V
+            elements is returned instead of just the first match.
             </summary>
+        </member>
+        <member name="P:mapf.Dictionary_U`2.Keys">
+            <summary>
+            Gets an enumerable collection that contains the keys in the read-only dictionary.
+            Warning: May contain duplicates if multiple inner dicts have the same key.
+            </summary>
+            <returns>An enumerable collection that contains the keys in the read-only dictionary.</returns>
+        </member>
+        <member name="P:mapf.Dictionary_U`2.Values">
+            <summary>
+            Gets an enumerable collection that contains the values in the read-only dictionary.
+            </summary>
+            <returns>
+            An enumerable collection that contains the values in the read-only dictionary.
+            </returns>
+        </member>
+        <member name="P:mapf.Dictionary_U`2.Item(`0)">
+            <summary>
+            Gets a combined list of the values mapped to the specified key in the combined dictionaries.
+            </summary>
+            <param name="key">The key to locate.</param>
+            <returns>A combined list of the values mapped to the specified key in combined dictionaries.</returns>
+            <exception cref="T:System.ArgumentNullException">key is null.</exception>
+            <exception cref="T:System.Collections.Generic.KeyNotFoundException">key is not found.</exception>
+        </member>
+        <member name="M:mapf.Dictionary_U`2.TryGetValue(`0,System.Collections.Generic.List{`1}@)">
+            <summary>
+            Gets a combined list of values mapped to the specified key in the combined dictionaries, or null if none
+            are found.
+            </summary>
+            <param name="key"></param>
+            <param name="value"></param>
             <returns></returns>
         </member>
-        <member name="M:mapf.CbsConstraint.Allows(mapf.CbsConstraint)">
+        <member name="M:mapf.Dictionary_U`2.ContainsKey(`0)">
             <summary>
-            Kind of the opposite of Equals: checks that the moves are unequal or that not one of the other's agents appears in this.agents.
+            Returns whether the specified key exists in any of the combined dictionaries
+            </summary>
+            <param name="key">The key to look for</param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.Dictionary_U`2.Clear">
+            <summary>
+            Remove all dictionaries from the union
+            </summary>
+        </member>
+        <member name="M:mapf.Dictionary_U`2.Join(System.Collections.Generic.IReadOnlyDictionary{`0,System.Collections.Generic.List{`1}})">
+            <summary>
+            Add a dictionary to the union
+            </summary>
+            <param name="other">the dictionary to add</param>
+        </member>
+        <member name="M:mapf.Dictionary_U`2.Separate(System.Collections.Generic.IReadOnlyDictionary{`0,System.Collections.Generic.List{`1}})">
+            <summary>
+            Remove a dictionary from the union
+            </summary>
+            <param name="other">the dictionary to add</param>
+        </member>
+        <member name="M:mapf.Dictionary_U`2.Print">
+            <summary>
+            Not used.
+            </summary>
+        </member>
+        <member name="P:mapf.Dictionary_U`2.Count">
+            <summary>
+            Gets the number of keys in the Dictionary. 
+            </summary>
+        </member>
+        <member name="T:mapf.DisjointSets`1">
+            <summary>
+            Algorithm from http://en.wikipedia.org/wiki/Disjoint-set_data_structure.
+            Operations cost O(Ackerman^-1(n)) time - practically constant. Cost is asymptotically optimal :)
+            </summary>
+        </member>
+        <member name="M:mapf.DisjointSets`1.#ctor(System.Collections.Generic.ISet{`0})">
+            <summary>
+            Initially all entries are single item sets.
+            </summary>
+            <param name="entries"></param>
+        </member>
+        <member name="M:mapf.DisjointSets`1.AddSet(`0)">
+            <summary>
+            Does nothing if entry is already present.
+            Returns whether the entry was really added now.
+            </summary>
+        </member>
+        <member name="M:mapf.DisjointSets`1.IsSingle(`0)">
+            <summary>
+            Assumes entry is already in the DisjointSets data structure
+            </summary>
+            <param name="entry"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.DisjointSets`1.CopyUnions(mapf.DisjointSets{`0})">
+            <summary>
+            Modifies this data structure to also contains all unions from other.
             </summary>
             <param name="other"></param>
+            <returns>Whether this object was changed</returns>
+        </member>
+        <member name="M:mapf.DisjointSets`1.Find(mapf.DisjointSetItem)">
+            <summary>
+            Finds the representative of the item's set
+            </summary>
+            <param name="x"></param>
             <returns></returns>
+        </member>
+        <member name="M:mapf.DisjointSets`1.Union(`0,`0)">
+            <summary>
+            Doesn't assume x, y already in the data structure.
+            Returns whether they were really only united now.
+            </summary>
+            <param name="entryA"></param>
+            <param name="entryB"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.DisjointSets`1.AreUnited(`0,`0)">
+            <summary>
+            Assumes entries are already in the DisjointSets data structure
+            </summary>
+            <param name="entryA"></param>
+            <param name="entryB"></param>
+            <returns></returns>
+        </member>
+        <member name="T:mapf.DynamicLazyOpenList`1">
+            <summary>
+            This open list invokes an expensive-to-compute heuristic on items before they're removed,
+            potentially pushing them back into itself if their F value increased above the next item in
+            the list.
+            The heuristic is given the "target value" - the minimum estimate that would cause an item to
+            be pushed back, and is allowed to stop once this estimate was reached.
+            </summary>
+            <typeparam name="Item"></typeparam>
+        </member>
+        <member name="T:mapf.EnumeratedPDB">
+            <summary>
+            Represents a pattern database that enumerates all possible
+            configurations of the state space by mapping each state to a unique
+            32-bit integer. A lookup table in memory maps each 32-bit integer
+            representation of the state to a heuristic estimate. In order to reduce
+            memory consumption even further, the heuristic estimates are internally
+            stored as the difference on top of the single shortest path heuristic.
+            The hope is that the reduced magnitude of heuristic values will now
+            always fit within the range of a single unsigned byte. This assumption,
+            of course, will break on instances that are large enough to cause an
+            overflow.
+            </summary>
+        </member>
+        <member name="F:mapf.EnumeratedPDB.table">
+            <summary>
+            The index is the hash of the state, and the resulting value should
+            be added to that reported by the true path heuristic in order to
+            get the correct admissible heuristic value. We reserve Byte.MaxValue
+            to represent an uninitialized table entry.
+            </summary>
+        </member>
+        <member name="F:mapf.EnumeratedPDB.permutations">
+            <summary>
+            permutations[i] represents the number of permutations of the
+            remaining agents after placing the ith agent. For example, if we
+            had 10 agents, and we've already placed 3 of them, then
+            permutations[2] represents the number of permutations for the
+            remaining 7 agents. This precomputed table depends on the number
+            of free locations in the board and is used as a perfect hash 
+            function that maps a state in the search space to an integer.
+            </summary>
+        </member>
+        <member name="F:mapf.EnumeratedPDB.offsetFromSingleShortestPath">
+            <summary>
+            Determines whether or not we will internally represent heuristic
+            values as offsets from the single shortest path heuristic.
+            </summary>
+        </member>
+        <member name="T:mapf.EnumeratedPDB.Context">
+            <summary>
+            Encapsulates the two file streams we will be using as we are
+            building the pattern database. These two file streams represent the
+            nodes we will be reading for input, and the resulting generated
+            children nodes which will be outputted to the second file. We also
+            include certain measures such as the number of nodes that have been
+            written to a file, and the filenames.
+            </summary>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.Context.NextLevel">
+            <summary>
+            After processing all of the nodes in one level, and writing the
+            resulting children nodes to the next file, we are now ready to
+            process the next file. Therefore, we simply swap the input for
+            the output file stream.
+            </summary>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.estimateSize">
+            <summary>
+            The size of an enumerative pattern database based on our member
+            variables is simply as many permutations as possible given the
+            number of agents and the free locations. Note there may be some
+            additional constant overhead associated with this class.
+            </summary>
+            <returns>An estimate of the amount of memory required for this
+            pattern database in units of bytes.</returns>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
+            <summary>
+            The initialization function accepts a problem instance describing
+            the original full problem, and a list of agents for which this
+            pattern database will be responsible for. This must be called prior
+            to a call to build the pattern database.
+            </summary>
+            <param name="pi">A description of the problem instance.</param>
+            <param name="agentsToConsider">The agents that we should be responsible for.
+            Each entry in the list is an index to ProblemInstance.agents
+            pointing to which agents we care about.</param>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.build">
+            <summary>
+            Builds the pattern database, storing the heuristic table in memory.
+            </summary>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.h(mapf.WorldState)">
+            <summary>
+            Returns the heuristic estimate for the subset of agents of the
+            given state that this pattern database is responsible for.
+            </summary>
+            <param name="s">The current state.</param>
+            <returns>The PDB entry for the given state.</returns>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.hash(mapf.WorldState)">
+            <summary>
+            While working on the original search problem, we have to only pay
+            attention to a subset of all of the agents in the current state.
+            Specifically, we only consider the agents listed in agents,
+            which are the agents that we've built the current pattern database
+            for. This differs from the buildHash function, which hashes all
+            agents in the given state.
+            </summary>
+            <param name="s">A state which includes all of the agents in the
+            original search problem.</param>
+            <returns>An index into the table of heuristic values.</returns>
+        </member>
+        <member name="M:mapf.EnumeratedPDB.computePermutations">
+            <summary>
+            We precompute the total number of permutations for a given number
+            of agents. We refer to these precomputed values when we call our
+            hash function.
+            </summary>
+        </member>
+        <member name="M:mapf.HashSet_U`1.Clear">
+            <summary>
+            Hardly used.
+            </summary>
+        </member>
+        <member name="M:mapf.HashSet_U`1.Print">
+            <summary>
+            Not used.
+            </summary>
+        </member>
+        <member name="P:mapf.HashSet_U`1.Count">
+            <summary>
+            Gets the number of values in the HashSet. 
+            </summary>
+        </member>
+        <member name="M:mapf.IHeuristicCalculator`1.h(`0)">
+            <summary>Returns the heuristic estimate.</summary>
+            <param name="s">The current state.</param>
+        </member>
+        <member name="M:mapf.IHeuristicCalculator`1.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
+            <summary>
+            Initializes the pattern database by storing references to the
+            problem instance and also the subset of agents that the pattern
+            database pertains to.
+            </summary>
+            <param name="pi">The problem instance.</param>
+            <param name="agentsToConsider">The agents that the heuristic should keep track of.</param>
+        </member>
+        <member name="M:mapf.IHeuristicCalculator`1.GetName">
+            <summary>
+            Return the name of the heuristic, useful for outputing results.
+            This is needed because ToString() is provided by the "object" class so it can't be used
+            to force this behavior to be implemented;
+            </summary>
+            <returns>The name of the solver</returns>
+        </member>
+        <member name="M:mapf.ILazyHeuristic`1.h(`0,System.Int32)">
+            <summary>
+            Returns the heuristic estimate. Stops estimation once the target estimate is reached.
+            </summary>
+            <param name="s">The current state.</param>
+            <param name="target">The lowest target estimate to return, if possible.</param>
+        </member>
+        <member name="M:mapf.IBoundedLazyHeuristic`1.h(`0,System.Int32,System.Single)">
+            <summary>
+            Returns the heuristic estimate. Stops estimation once the target estimate is reached.
+            Used when a low level generated nodes cap is needed.
+            </summary>
+            <param name="s">The current state.</param>
+            <param name="target">The lowest target estimate to return, if possible.</param>
+            <param name="effectiveBranchingFactor">The branching factor so far of the A* search we're serving.</param>
+        </member>
+        <member name="M:mapf.IBoundedLazyHeuristic`1.h(`0,System.Int32,System.Single,System.Int32,System.Boolean)">
+            <summary>Returns the heuristic estimate. Used when a time cap is needed.</summary>
+            <param name="s">The current state.</param>
+            <param name="target">The lowest target estimate to return, if possible.</param>
+            <param name="effectiveBranchingFactor">Ignored. Kept only to make the number of parameters different from the previous method.</param>
+            <param name="millisCap">Stop the search when the process' total millisecond count reaches the cap.</param>
+            <param name="resume">Whether to resume the last search. Assumes last search was from the same node</param>
+        </member>
+        <member name="T:mapf.IBinaryHeapItem">
+            <summary>
+            represents items that are stored in the binary heap
+            </summary>
+        </member>
+        <member name="M:mapf.IBinaryHeapItem.GetIndexInHeap">
+            <summary>
+            The index of the item in the binary heap
+            </summary>
+        </member>
+        <member name="P:mapf.IHeuristicSearchNode.hBonus">
+            <summary>
+            Used to mark that heuristic estimate was improved already
+            </summary>
+        </member>
+        <member name="M:mapf.IHeuristicSearchNode.GetTargetH(System.Int32)">
+            <summary>
+            Returns the h needed to set (raise) the node's f to the given value
+            </summary>
+            <param name="f"></param>
+            <returns></returns>
+        </member>
+        <member name="F:mapf.IndependenceDetection.plan">
+            <summary>
+            The complete plan for all the agents that was found.
+            </summary>
+        </member>
+        <member name="M:mapf.IndependenceDetection.CalculateJointPlan">
+            <summary>
+            Calculate the full plan for all the agents that has been found by the algorithm
+            </summary>
+        </member>
+        <member name="M:mapf.IndependenceDetection.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output. 
+            </summary>
+        </member>
+        <member name="M:mapf.IndependenceDetection.GetMaxGroupSize">
+            <summary>
+            Also calculates min group size and max solution depth on the way.
+            FIXME: Code dup!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.IndependenceDetection.FindConflictingGroups">
+            <summary>
+            Simulates the execution of the plans found for the different groups. 
+            If there are conflicting plans - return the conflicting groups.
+            </summary>
+            <returns>A conflict object with data about the found conflict, or null if no conflict exists</returns>
+        </member>
+        <member name="M:mapf.IndependenceDetection.SimpleID(mapf.Run)">
+            <summary>
+            Search for an optimal solution using the Simple Independence Detection algorithm from Trevor Standley's paper.
+            </summary>
+            <param name="runner"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.IndependenceDetection.ImprovedID(mapf.Run)">
+            <summary>
+            Search for an optimal solution using the Independence Detection algorithm in Standley's paper,
+            which utilises a CAT.
+            </summary>
+            <param name="runner"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.IndependenceDetection.JoinGroups(mapf.IndependenceDetectionConflict,System.Int32)">
+            <summary>
+            Join the conflicting groups into a single group
+            </summary>
+            <param name="conflict">An object that describes the conflict</param>
+            <returns>The composite group of agents</returns>
+        </member>
+        <member name="M:mapf.IndependenceDetection.Solve">
+            <summary>
+            Run the A* algorithm with Standley's ID and OD improvements.
+            </summary>
+            <returns>true if optimal solution has been found</returns>
+        </member>
+        <member name="T:mapf.IndependenceDetectionAgentsGroup">
+            <summary>
+            This class represents a group of agents that need to be solved together.
+            </summary>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.Solve(mapf.Run)">
+            <summary>
+            Solve the group of agents together.
+            </summary>
+            <param name="myRunner"></param>
+            <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.SolveWithSelection(mapf.Run)">
+            <summary>
+            Solve the group of agents together.
+            </summary>
+            <param name="runner"></param>
+            <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.GetPlan">
+            <summary>
+            Returns the plan for the group of agents. This is a collection of Moves for every time step until all the agents reach their goal.
+            </summary>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.Join(mapf.IndependenceDetectionAgentsGroup,System.Int32)">
+            <summary>
+            Joins this and another group to a single group with all of the agents together.
+            </summary>
+            <param name="other"></param>
+            <returns>A new AgentsGroup object with the agents from both this and the other group</returns>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.Size">
+            <summary>
+            Returns the number of agents in the group.
+            </summary>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.ReplanUnderConstraints(mapf.Plan,mapf.Run,System.Boolean)">
+            <summary>
+            Tries to find a plan for this group, that will not conflict with the given plan,
+            and still has the same solution cost as the current solution cost.
+            This is used in the ImprovedID() method.
+            </summary>
+            <param name="plan"></param>
+            <param name="runner"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.IndependenceDetectionAgentsGroup.OutputIDMetaStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of every ID solver to the given output. 
+            </summary>
+        </member>
+        <member name="T:mapf.IndependenceDetectionConflict">
+            <summary>
+            This class represents a conflict between two groups of agents in Trevor Standley's
+            Indepedence Detection algorithm.
+            </summary>
+        </member>
+        <member name="M:mapf.ISolver.GetName">
+            <summary>
+            Return the name of the solver, useful for outputing results.
+            </summary>
+            <returns>The name of the solver</returns>
+        </member>
+        <member name="M:mapf.ISolver.Solve">
+            <summary>
+            Solves the instance that was set by a call to Setup()
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.ISolver.Setup(mapf.ProblemInstance,mapf.Run)">
+            <summary>
+            Setup the relevant data structures for a run.
+            </summary>
+            <param name="problemInstance"></param>
+            <param name="runner"></param>
+        </member>
+        <member name="M:mapf.ISolver.Clear">
+            <summary>
+            Clears the relevant data structures and variables to free memory usage.
+            </summary>
+        </member>
+        <member name="M:mapf.ISolver.GetPlan">
+            <summary>
+            Returns the found plan, or null if no plan was found.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.ISolver.GetSolutionCost">
+            <summary>
+            Returns the cost of the solution found, or error codes otherwise.
+            </summary>
+        </member>
+        <member name="M:mapf.ISolver.GetSolutionDepth">
+            <summary>
+            Gets the delta of (actual solution cost - first state heuristics)
+            </summary>
+        </member>
+        <member name="M:mapf.ICbsSolver.Setup(mapf.ProblemInstance,System.Int32,mapf.Run,System.Int32,System.Int32,mapf.MDD)">
+            <summary>
+            
+            </summary>
+            <param name="problemInstance"></param>
+            <param name="minTimeStep">Used mostly to force constraints to have an effect</param>
+            <param name="runner"></param>
+            <param name="minCost">
+            Goal nodes with a lower cost aren't considered a goal.
+            This can be used to improve the heuristic estimate!
+            </param>
+            <param name="maxCost">If known, can speed up the search (no surplus nodes would be generated)</param>
+            <param name="mdd">Optional MDD of cost minCost=maxCost</param>
+        </member>
+        <member name="M:mapf.IHeuristicSolver`1.GetHeuristic">
+            <summary>
+            Get the heuristic
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.IStatisticsCsvWriter.OutputStatisticsHeader(System.IO.TextWriter)">
+            <summary>
+            Prints header of statistics of a single run to the given output. 
+            </summary>
+        </member>
+        <member name="M:mapf.IStatisticsCsvWriter.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output.
+            </summary>
+        </member>
+        <member name="P:mapf.IStatisticsCsvWriter.NumStatsColumns">
+            <summary>
+            To fill out them out when an algorithm isn't run
+            </summary>
+        </member>
+        <member name="M:mapf.IStatisticsCsvWriter.ClearStatistics">
+            <summary>
+            Clears statistics.
+            </summary>
+        </member>
+        <member name="T:mapf.IterativeDeepeningCBS">
+            <summary>
+            Is the CBS open list ever large enough to warrant this?
+            Consider foregoing this implementation. It needs maintainence anyway.
+            </summary>
         </member>
         <member name="T:mapf.MDD">
             <summary>
@@ -1679,156 +2058,6 @@
             <param name="obj"></param>
             <returns></returns>
         </member>
-        <member name="M:mapf.IHeuristicCalculator`1.h(`0)">
-            <summary>Returns the heuristic estimate.</summary>
-            <param name="s">The current state.</param>
-        </member>
-        <member name="M:mapf.IHeuristicCalculator`1.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
-            <summary>
-            Initializes the pattern database by storing references to the
-            problem instance and also the subset of agents that the pattern
-            database pertains to.
-            </summary>
-            <param name="pi">The problem instance.</param>
-            <param name="agentsToConsider">The agents that the heuristic should keep track of.</param>
-        </member>
-        <member name="M:mapf.IHeuristicCalculator`1.GetName">
-            <summary>
-            Return the name of the heuristic, useful for outputing results.
-            This is needed because ToString() is provided by the "object" class so it can't be used
-            to force this behavior to be implemented;
-            </summary>
-            <returns>The name of the solver</returns>
-        </member>
-        <member name="M:mapf.ILazyHeuristic`1.h(`0,System.Int32)">
-            <summary>
-            Returns the heuristic estimate. Stops estimation once the target estimate is reached.
-            </summary>
-            <param name="s">The current state.</param>
-            <param name="target">The lowest target estimate to return, if possible.</param>
-        </member>
-        <member name="M:mapf.IBoundedLazyHeuristic`1.h(`0,System.Int32,System.Single)">
-            <summary>
-            Returns the heuristic estimate. Stops estimation once the target estimate is reached.
-            Used when a low level generated nodes cap is needed.
-            </summary>
-            <param name="s">The current state.</param>
-            <param name="target">The lowest target estimate to return, if possible.</param>
-            <param name="effectiveBranchingFactor">The branching factor so far of the A* search we're serving.</param>
-        </member>
-        <member name="M:mapf.IBoundedLazyHeuristic`1.h(`0,System.Int32,System.Single,System.Int32,System.Boolean)">
-            <summary>Returns the heuristic estimate. Used when a time cap is needed.</summary>
-            <param name="s">The current state.</param>
-            <param name="target">The lowest target estimate to return, if possible.</param>
-            <param name="effectiveBranchingFactor">Ignored. Kept only to make the number of parameters different from the previous method.</param>
-            <param name="millisCap">Stop the search when the process' total millisecond count reaches the cap.</param>
-            <param name="resume">Whether to resume the last search. Assumes last search was from the same node</param>
-        </member>
-        <member name="F:mapf.Constants.NO_SOLUTION_COST">
-            <summary>
-            The cost that is set to the algorithms when all the states have been expanded and no goal was found 
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.TIMEOUT_COST">
-            <summary>
-            The cost that is set to the algorithms when they are halted due to out of time 
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.MAX_MEMORY_COST">
-            <summary>
-            The cost that is set to the algorithms when they are halted due to out of memory
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.GENERATED_PER_PRINT">
-            <summary>
-            The number of generated nodes after which a debug print will be given
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.PRIMES_FOR_HASHING">
-            <summary>
-            Prime numbers for hashing
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.MAX_FAIL_COUNT">
-            <summary>
-            Max Consecutive failures before an algorithm is omitted from the list of tested algorithms
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.EXHAUSTIVE_ICTS">
-            <summary>
-            This determines whether the ICTS should search for a solution with lowest conflicts for the ID framework
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.ALLOW_HEAD_ON_COLLISION">
-            <summary>
-            Allow head-on collisions
-            </summary>
-        </member>
-        <member name="F:mapf.Constants.ALLOW_DIAGONAL_MOVE">
-            <summary>
-            FIXME: Diagonal move support should count their cost as sqrt(2)
-            </summary>
-        </member>
-        <member name="M:mapf.ISolver.GetName">
-            <summary>
-            Return the name of the solver, useful for outputing results.
-            </summary>
-            <returns>The name of the solver</returns>
-        </member>
-        <member name="M:mapf.ISolver.Solve">
-            <summary>
-            Solves the instance that was set by a call to Setup()
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.ISolver.Setup(mapf.ProblemInstance,mapf.Run)">
-            <summary>
-            Setup the relevant data structures for a run.
-            </summary>
-            <param name="problemInstance"></param>
-            <param name="runner"></param>
-        </member>
-        <member name="M:mapf.ISolver.Clear">
-            <summary>
-            Clears the relevant data structures and variables to free memory usage.
-            </summary>
-        </member>
-        <member name="M:mapf.ISolver.GetPlan">
-            <summary>
-            Returns the found plan, or null if no plan was found.
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.ISolver.GetSolutionCost">
-            <summary>
-            Returns the cost of the solution found, or error codes otherwise.
-            </summary>
-        </member>
-        <member name="M:mapf.ISolver.GetSolutionDepth">
-            <summary>
-            Gets the delta of (actual solution cost - first state heuristics)
-            </summary>
-        </member>
-        <member name="M:mapf.ICbsSolver.Setup(mapf.ProblemInstance,System.Int32,mapf.Run,System.Int32,System.Int32,mapf.MDD)">
-            <summary>
-            
-            </summary>
-            <param name="problemInstance"></param>
-            <param name="minTimeStep">Used mostly to force constraints to have an effect</param>
-            <param name="runner"></param>
-            <param name="minCost">
-            Goal nodes with a lower cost aren't considered a goal.
-            This can be used to improve the heuristic estimate!
-            </param>
-            <param name="maxCost">If known, can speed up the search (no surplus nodes would be generated)</param>
-            <param name="mdd">Optional MDD of cost minCost=maxCost</param>
-        </member>
-        <member name="M:mapf.IHeuristicSolver`1.GetHeuristic">
-            <summary>
-            Get the heuristic
-            </summary>
-            <returns></returns>
-        </member>
         <member name="T:mapf.MddMatchAndPrune">
             <summary>
             Used by CostTreeNodeSolverKSimpleMatching (but actually commented out)
@@ -1888,6 +2117,254 @@
             i.e. from that point forward
             </summary>
             <param name="checkFrom"></param>
+            <returns></returns>
+        </member>
+        <member name="F:mapf.MddPruningHeuristicForCbs.cache">
+            <summary>
+            Maps a pair of agents and their costs to whether there's a solution with those costs
+            </summary>
+        </member>
+        <member name="M:mapf.MddPruningHeuristicForCbs.h(mapf.CbsNode)">
+            <summary>
+            Returns 0 if the conflict is solvable with the current costs, 1 otherwise. If unsure, returns 0;
+            Currently avoiding building a k-agent MDD.
+            TODO: This became largely irrelevant after we've discovered cardinal conflicts, but
+            now that we're always building all MDDs, it might be worth it to try to sync the MDDs
+            for nodes with no cardinal conflicts. We might find they're still unsolvable
+            with the current costs.
+            </summary>
+            <param name="s"></param>
+            <param name="ignoreConstraints">
+            Ignore constraints. This allows the results for the given costs to be used elsewhere in
+            the CBS tree, but can cause under-estimates and make building the MDD a little slower.
+            </param>
+            <returns>
+            If after syncing and pruning the MDDs at the current costs for the two conflicting agents
+            the whole MDD was pruned, indicating these agents can't be solved at the current cost,
+            returns 1. Else returns 0
+            </returns>
+        </member>
+        <member name="M:mapf.MddPruningHeuristicForCbs.h(mapf.CbsNode,System.Int32)">
+            <summary>
+            Lazy version
+            </summary>
+            <param name="s"></param>
+            <param name="target"></param>
+            <returns></returns>
+        </member>
+        <member name="T:mapf.Move">
+            <summary>
+            This class represents a single move of an agent. 
+            It includes the target location of the move and the direction of the move.
+            The start location can be extracted using the direction, with the method GetSource().
+            </summary>
+        </member>
+        <member name="F:mapf.Move.Direction.NO_DIRECTION">
+            <summary>
+            This constant is set to the direction field to mark that this move does not hold a direction.
+            <remarks> 
+            Directionless moves are a poor design choice instead of making a class that represents a 2D point,
+            but will probably be more efficient.
+            </remarks>
+            </summary>
+        </member>
+        <member name="F:mapf.Move.deltasToDirection">
+            <remarks>
+            Deltas have to be used +1
+            </remarks>
+        </member>
+        <member name="M:mapf.Move.GetNextMoves">
+            <summary>
+            A generator yielding new adjacent Moves
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.Move.Update(mapf.Move.Direction)">
+            <summary>
+            Change coordinates in specified direction.
+            </summary>
+            <param name="direction"></param>
+        </member>
+        <member name="M:mapf.Move.GetMoveWithoutDirection">
+            <summary>
+            Returns a copy of this move, where the direction is set to Move.Direction.NO_DIRECTION
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.Move.setOppositeMove">
+            <summary>
+            Changes this move to represent its opposite. Warning: Changes the hash. Not safe after the object is put in a hash table!
+            </summary>
+        </member>
+        <member name="M:mapf.Move.RemoveDirection">
+            <summary>
+            Removes the direction of this Move
+            </summary>
+        </member>
+        <member name="M:mapf.Move.IsColliding(mapf.Move)">
+            <summary>
+            Check if the given move collides with this move.
+            This includes:
+            1. Head on collision
+            2. When other move targets the same location.
+            </summary>
+            <param name="other"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.Move.IsColliding(System.Int32,System.Int32,mapf.Move.Direction)">
+            <summary>
+            Check if colliding with an agent moving to the given x,y from the given direction.
+            This includes:
+            1. Head on collision
+            2. When other move targets the same location.
+            TODO: When diagonal moves are allowed, need to also check for diagonal collisions, e.g., (0,0)->(1,1) and (0,1)->(1,0) and such.
+            No rush, though. We don't currently work with diagonal moves.
+            </summary>
+            <param name="other_x"></param>
+            <param name="other_y"></param>
+            <param name="other_direction"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.Move.Equals(System.Object)">
+            <summary>
+            Compare two Move objects. 
+            If one of the Move objects does not have a direction that is set (i.e. direction == Move.Direction.NO_DIRECTION)
+            then the direction part of the Move is ignored.
+            </summary>
+            <param name="obj"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.MvcHeuristicForCbs.h(mapf.CbsNode)">
+            <summary>
+            Compute h value with a minimum vertex cover solver.
+            Assumes the s.cbs.mergeThreshold is -1.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.MvcHeuristicForCbs.h(mapf.CbsNode,System.Int32)">
+            <summary>
+            Lazy version
+            </summary>
+            <param name="s"></param>
+            <param name="target"></param>
+            <returns></returns>
+        </member>
+        <member name="T:mapf.OpenList`1">
+            <summary>
+            Supporting O(1) insertion and removal of items that compare equal to the top of the heap.
+            TODO: Compare against a bucketed implementation where all equal costs are bucketed in a queue,
+                  even though it might not respect all tie-breaking (but still prioritizes goal nodes).
+            </summary>
+        </member>
+        <member name="M:mapf.OpenList`1.Remove(`0)">
+            <summary>
+            Uses Equality check only for removing from the queue.
+            Might cost O(n) if all items are in the queue and not the heap.
+            </summary>
+            <param name="item"></param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.OpenList`1.Contains(`0)">
+            <summary>
+            Assumes item was added to the open list in the past
+            </summary>
+            <param name="item"></param>
+            <returns></returns>
+        </member>
+        <member name="F:mapf.PDB.agentsToConsider">
+            <summary>
+            The agents to extract from the state. Each value in this list is an
+            index into the <see cref="T:mapf.WorldState"/>.allAgentsStates array. This is
+            ignored while we are building the pattern database (because it is
+            assumed that we are initialized by a root node that contains only
+            the agents we are interested in), but is used during the search effort
+            in the real problem.
+            </summary>
+        </member>
+        <member name="M:mapf.PDB.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
+            <summary>
+            Initializes the pattern database by storing references to the
+            problem instance and also the subset of agents that the pattern
+            database pertains to.
+            </summary>
+            <param name="pi">The problem instance.</param>
+            <param name="agentsToConsider">The agents that the pattern database should keep track of.</param>
+        </member>
+        <member name="M:mapf.PDB.estimateSize">
+            <summary>
+            Returns an estimate of the amount of memory in bytes that is
+            required to keep this PDB in memory. This is useful in
+            determining how many agents we should allocate to a particular
+            pattern database to efficiently utilize our available memory.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.PDB.Expand(mapf.WorldState,System.Collections.Generic.ICollection{mapf.WorldState})">
+            <summary>
+            Expands a node. This is done recursively - generating agent possibilities one at a time.
+            This includes:
+            - Generating the children
+            - Inserting them into OPEN
+            - Insert node into CLOSED
+            Why does a PDB need to know how to expand nodes? Seems like someone else's job
+            </summary>
+            <param name="currentNode">The node to expand</param>
+            <param name="children">The generated nodes will be filled into this collection</param>
+        </member>
+        <member name="M:mapf.PDB.Expand(mapf.WorldState,System.Int32,System.Collections.Generic.ICollection{mapf.WorldState},System.Collections.Generic.ICollection{mapf.Move})">
+            <summary>
+            Expands a node. This is done recursively - generating agent possibilities one at a time.
+            This includes:
+            - Generating the children
+            - Inserting them into OPEN
+            - Insert node into CLOSED
+            </summary>
+            <param name="currentNode">The node to expand</param>
+            <param name="agentIndex">The index of the agent to expand children for</param>
+            <param name="children">A list in which to set the children states</param>
+            <param name="previousMoves">A collection of moves performed by the previous agents in this time step (needed to verify that no collisions occur)</param>
+        </member>
+        <member name="M:mapf.PDB.IsValid(mapf.Move,System.Int32,System.Collections.Generic.ICollection{mapf.Move})">
+            <summary>
+            Check if the move is valid, i.e. not colliding into walls or other agents.
+            </summary>
+            <param name="possibleMove">The proposed move (to check if it is valid)</param>
+            <param name="agentNum">The index of the agent that is proposed to perform the move</param>
+            <param name="previousAgentMoves">A collection of moves that will be done by the other agents</param>
+            <returns></returns>
+        </member>
+        <member name="M:mapf.PDB.OutputStatisticsHeader(System.IO.TextWriter)">
+            <summary>
+            Prints header of statistics of a single run to the given output. 
+            </summary>
+        </member>
+        <member name="M:mapf.PDB.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output.
+            </summary>
+        </member>
+        <member name="M:mapf.PDB.ClearStatistics">
+            <summary>
+            Clears statistics.
+            </summary>
+        </member>
+        <member name="T:mapf.PEA_Star">
+            <summary>
+            Only keeps generated nodes that have the same f as the parent.
+            The parent is then re-inserted with the lowest f from its discarded children
+            (Yoshizumi, Miura, and Ishida 2000)
+            </summary>
+        </member>
+        <member name="F:mapf.PEA_Star.nextFvalue">
+            <summary>
+            The lowest discarded F
+            </summary>
+        </member>
+        <member name="M:mapf.PEA_Star.ProcessGeneratedNode(mapf.WorldState)">
+            <summary>
+            Adds nodes of target F only
+            </summary>
+            <param name="currentNode"></param>
             <returns></returns>
         </member>
         <member name="T:mapf.Plan">
@@ -2029,306 +2506,6 @@
             </summary>
             <param name="allRoutes"></param>
             <returns></returns>
-        </member>
-        <member name="T:mapf.A_Star_WithRID">
-            <summary>
-            This Solver runs A* but from time to time tries to solve completely the expanded node
-            using Standley's independence detection.
-            </summary>
-        </member>
-        <member name="T:mapf.Properties.Resources">
-            <summary>
-              A strongly-typed resource class, for looking up localized strings, etc.
-            </summary>
-        </member>
-        <member name="P:mapf.Properties.Resources.ResourceManager">
-            <summary>
-              Returns the cached ResourceManager instance used by this class.
-            </summary>
-        </member>
-        <member name="P:mapf.Properties.Resources.Culture">
-            <summary>
-              Overrides the current thread's CurrentUICulture property for all
-              resource lookups using this strongly typed resource class.
-            </summary>
-        </member>
-        <member name="T:mapf.XGBoostTests">
-            <summary>
-            This class is responsible for running the experiments.
-            </summary>
-        </member>
-        <member name="T:mapf.SumIndividualCosts">
-            <summary>
-            This class forms a wrapper around problem.GetSingleAgentOptimalCost().
-            It represents the single shortest path heuristic, precomputed for every agent.
-            </summary>
-        </member>
-        <member name="M:mapf.SumIndividualCosts.estimateSize">
-            <summary>
-            Since this class simply refers via a table-lookup to the globally
-            available problem.GetSingleAgentOptimalCost class, we incur no memory.
-            </summary>
-            <returns>0 by definition.</returns>
-        </member>
-        <member name="M:mapf.SumIndividualCosts.build">
-            <summary>
-            The building function for this class doesn't do anything because we
-            are simply wrapping the functionality of the problem.GetSingleAgentOptimalCost
-            class.
-            </summary>
-        </member>
-        <member name="M:mapf.SumIndividualCosts.h(mapf.WorldState)">
-            <summary>
-            Returns the heuristic estimate.
-            </summary>
-            <param name="s">The current state.</param>
-            <returns>The PDB entry for the given state.</returns>
-        </member>
-        <member name="M:mapf.SumIndividualCosts.OutputStatisticsHeader(System.IO.TextWriter)">
-            <summary>
-            Prints header of statistics of a single run to the given output. 
-            </summary>
-        </member>
-        <member name="M:mapf.SumIndividualCosts.OutputStatistics(System.IO.TextWriter)">
-            <summary>
-            Prints statistics of a single run to the given output.
-            </summary>
-        </member>
-        <member name="M:mapf.SumIndividualCosts.ClearStatistics">
-            <summary>
-            Clears statistics.
-            </summary>
-        </member>
-        <member name="T:mapf.MaxIndividualCosts">
-            <summary>
-            This class forms a wrapper around problem.GetSingleAgentOptimalCost().
-            It represents the single shortest path heuristic for makespan, precomputed for every agent.
-            </summary>
-        </member>
-        <member name="M:mapf.MaxIndividualCosts.estimateSize">
-            <summary>
-            Since this class simply refers via a table-lookup to the globally
-            available problem.GetSingleAgentOptimalCost class, we incur no memory.
-            </summary>
-            <returns>0 by definition.</returns>
-        </member>
-        <member name="M:mapf.MaxIndividualCosts.build">
-            <summary>
-            The building function for this class doesn't do anything because we
-            are simply wrapping the functionality of the problem.GetSingleAgentOptimalCost
-            class.
-            </summary>
-        </member>
-        <member name="M:mapf.MaxIndividualCosts.h(mapf.WorldState)">
-            <summary>
-            Returns the heuristic estimate.
-            </summary>
-            <param name="s">The current state.</param>
-            <returns>The PDB entry for the given state.</returns>
-        </member>
-        <member name="M:mapf.MaxIndividualCosts.OutputStatisticsHeader(System.IO.TextWriter)">
-            <summary>
-            Prints header of statistics of a single run to the given output. 
-            </summary>
-        </member>
-        <member name="M:mapf.MaxIndividualCosts.OutputStatistics(System.IO.TextWriter)">
-            <summary>
-            Prints statistics of a single run to the given output.
-            </summary>
-        </member>
-        <member name="M:mapf.MaxIndividualCosts.ClearStatistics">
-            <summary>
-            Clears statistics.
-            </summary>
-        </member>
-        <member name="T:mapf.EnumeratedPDB">
-            <summary>
-            Represents a pattern database that enumerates all possible
-            configurations of the state space by mapping each state to a unique
-            32-bit integer. A lookup table in memory maps each 32-bit integer
-            representation of the state to a heuristic estimate. In order to reduce
-            memory consumption even further, the heuristic estimates are internally
-            stored as the difference on top of the single shortest path heuristic.
-            The hope is that the reduced magnitude of heuristic values will now
-            always fit within the range of a single unsigned byte. This assumption,
-            of course, will break on instances that are large enough to cause an
-            overflow.
-            </summary>
-        </member>
-        <member name="F:mapf.EnumeratedPDB.table">
-            <summary>
-            The index is the hash of the state, and the resulting value should
-            be added to that reported by the true path heuristic in order to
-            get the correct admissible heuristic value. We reserve Byte.MaxValue
-            to represent an uninitialized table entry.
-            </summary>
-        </member>
-        <member name="F:mapf.EnumeratedPDB.permutations">
-            <summary>
-            permutations[i] represents the number of permutations of the
-            remaining agents after placing the ith agent. For example, if we
-            had 10 agents, and we've already placed 3 of them, then
-            permutations[2] represents the number of permutations for the
-            remaining 7 agents. This precomputed table depends on the number
-            of free locations in the board and is used as a perfect hash 
-            function that maps a state in the search space to an integer.
-            </summary>
-        </member>
-        <member name="F:mapf.EnumeratedPDB.offsetFromSingleShortestPath">
-            <summary>
-            Determines whether or not we will internally represent heuristic
-            values as offsets from the single shortest path heuristic.
-            </summary>
-        </member>
-        <member name="T:mapf.EnumeratedPDB.Context">
-            <summary>
-            Encapsulates the two file streams we will be using as we are
-            building the pattern database. These two file streams represent the
-            nodes we will be reading for input, and the resulting generated
-            children nodes which will be outputted to the second file. We also
-            include certain measures such as the number of nodes that have been
-            written to a file, and the filenames.
-            </summary>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.Context.NextLevel">
-            <summary>
-            After processing all of the nodes in one level, and writing the
-            resulting children nodes to the next file, we are now ready to
-            process the next file. Therefore, we simply swap the input for
-            the output file stream.
-            </summary>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.estimateSize">
-            <summary>
-            The size of an enumerative pattern database based on our member
-            variables is simply as many permutations as possible given the
-            number of agents and the free locations. Note there may be some
-            additional constant overhead associated with this class.
-            </summary>
-            <returns>An estimate of the amount of memory required for this
-            pattern database in units of bytes.</returns>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
-            <summary>
-            The initialization function accepts a problem instance describing
-            the original full problem, and a list of agents for which this
-            pattern database will be responsible for. This must be called prior
-            to a call to build the pattern database.
-            </summary>
-            <param name="pi">A description of the problem instance.</param>
-            <param name="agentsToConsider">The agents that we should be responsible for.
-            Each entry in the list is an index to ProblemInstance.agents
-            pointing to which agents we care about.</param>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.build">
-            <summary>
-            Builds the pattern database, storing the heuristic table in memory.
-            </summary>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.h(mapf.WorldState)">
-            <summary>
-            Returns the heuristic estimate for the subset of agents of the
-            given state that this pattern database is responsible for.
-            </summary>
-            <param name="s">The current state.</param>
-            <returns>The PDB entry for the given state.</returns>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.hash(mapf.WorldState)">
-            <summary>
-            While working on the original search problem, we have to only pay
-            attention to a subset of all of the agents in the current state.
-            Specifically, we only consider the agents listed in agents,
-            which are the agents that we've built the current pattern database
-            for. This differs from the buildHash function, which hashes all
-            agents in the given state.
-            </summary>
-            <param name="s">A state which includes all of the agents in the
-            original search problem.</param>
-            <returns>An index into the table of heuristic values.</returns>
-        </member>
-        <member name="M:mapf.EnumeratedPDB.computePermutations">
-            <summary>
-            We precompute the total number of permutations for a given number
-            of agents. We refer to these precomputed values when we call our
-            hash function.
-            </summary>
-        </member>
-        <member name="F:mapf.PDB.agentsToConsider">
-            <summary>
-            The agents to extract from the state. Each value in this list is an
-            index into the <see cref="T:mapf.WorldState"/>.allAgentsStates array. This is
-            ignored while we are building the pattern database (because it is
-            assumed that we are initialized by a root node that contains only
-            the agents we are interested in), but is used during the search effort
-            in the real problem.
-            </summary>
-        </member>
-        <member name="M:mapf.PDB.Init(mapf.ProblemInstance,System.Collections.Generic.List{System.UInt32})">
-            <summary>
-            Initializes the pattern database by storing references to the
-            problem instance and also the subset of agents that the pattern
-            database pertains to.
-            </summary>
-            <param name="pi">The problem instance.</param>
-            <param name="agentsToConsider">The agents that the pattern database should keep track of.</param>
-        </member>
-        <member name="M:mapf.PDB.estimateSize">
-            <summary>
-            Returns an estimate of the amount of memory in bytes that is
-            required to keep this PDB in memory. This is useful in
-            determining how many agents we should allocate to a particular
-            pattern database to efficiently utilize our available memory.
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.PDB.Expand(mapf.WorldState,System.Collections.Generic.ICollection{mapf.WorldState})">
-            <summary>
-            Expands a node. This is done recursively - generating agent possibilities one at a time.
-            This includes:
-            - Generating the children
-            - Inserting them into OPEN
-            - Insert node into CLOSED
-            Why does a PDB need to know how to expand nodes? Seems like someone else's job
-            </summary>
-            <param name="currentNode">The node to expand</param>
-            <param name="children">The generated nodes will be filled into this collection</param>
-        </member>
-        <member name="M:mapf.PDB.Expand(mapf.WorldState,System.Int32,System.Collections.Generic.ICollection{mapf.WorldState},System.Collections.Generic.ICollection{mapf.Move})">
-            <summary>
-            Expands a node. This is done recursively - generating agent possibilities one at a time.
-            This includes:
-            - Generating the children
-            - Inserting them into OPEN
-            - Insert node into CLOSED
-            </summary>
-            <param name="currentNode">The node to expand</param>
-            <param name="agentIndex">The index of the agent to expand children for</param>
-            <param name="children">A list in which to set the children states</param>
-            <param name="previousMoves">A collection of moves performed by the previous agents in this time step (needed to verify that no collisions occur)</param>
-        </member>
-        <member name="M:mapf.PDB.IsValid(mapf.Move,System.Int32,System.Collections.Generic.ICollection{mapf.Move})">
-            <summary>
-            Check if the move is valid, i.e. not colliding into walls or other agents.
-            </summary>
-            <param name="possibleMove">The proposed move (to check if it is valid)</param>
-            <param name="agentNum">The index of the agent that is proposed to perform the move</param>
-            <param name="previousAgentMoves">A collection of moves that will be done by the other agents</param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.PDB.OutputStatisticsHeader(System.IO.TextWriter)">
-            <summary>
-            Prints header of statistics of a single run to the given output. 
-            </summary>
-        </member>
-        <member name="M:mapf.PDB.OutputStatistics(System.IO.TextWriter)">
-            <summary>
-            Prints statistics of a single run to the given output.
-            </summary>
-        </member>
-        <member name="M:mapf.PDB.ClearStatistics">
-            <summary>
-            Clears statistics.
-            </summary>
         </member>
         <member name="T:mapf.ProblemInstance">
             <summary>
@@ -2557,88 +2734,6 @@
             <param name="toCheck"></param>
             <returns></returns>
         </member>
-        <member name="T:mapf.Move">
-            <summary>
-            This class represents a single move of an agent. 
-            It includes the target location of the move and the direction of the move.
-            The start location can be extracted using the direction, with the method GetSource().
-            </summary>
-        </member>
-        <member name="F:mapf.Move.Direction.NO_DIRECTION">
-            <summary>
-            This constant is set to the direction field to mark that this move does not hold a direction.
-            <remarks> 
-            Directionless moves are a poor design choice instead of making a class that represents a 2D point,
-            but will probably be more efficient.
-            </remarks>
-            </summary>
-        </member>
-        <member name="F:mapf.Move.deltasToDirection">
-            <remarks>
-            Deltas have to be used +1
-            </remarks>
-        </member>
-        <member name="M:mapf.Move.GetNextMoves">
-            <summary>
-            A generator yielding new adjacent Moves
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.Move.Update(mapf.Move.Direction)">
-            <summary>
-            Change coordinates in specified direction.
-            </summary>
-            <param name="direction"></param>
-        </member>
-        <member name="M:mapf.Move.GetMoveWithoutDirection">
-            <summary>
-            Returns a copy of this move, where the direction is set to Move.Direction.NO_DIRECTION
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.Move.setOppositeMove">
-            <summary>
-            Changes this move to represent its opposite. Warning: Changes the hash. Not safe after the object is put in a hash table!
-            </summary>
-        </member>
-        <member name="M:mapf.Move.RemoveDirection">
-            <summary>
-            Removes the direction of this Move
-            </summary>
-        </member>
-        <member name="M:mapf.Move.IsColliding(mapf.Move)">
-            <summary>
-            Check if the given move collides with this move.
-            This includes:
-            1. Head on collision
-            2. When other move targets the same location.
-            </summary>
-            <param name="other"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.Move.IsColliding(System.Int32,System.Int32,mapf.Move.Direction)">
-            <summary>
-            Check if colliding with an agent moving to the given x,y from the given direction.
-            This includes:
-            1. Head on collision
-            2. When other move targets the same location.
-            TODO: When diagonal moves are allowed, need to also check for diagonal collisions, e.g., (0,0)->(1,1) and (0,1)->(1,0) and such.
-            No rush, though. We don't currently work with diagonal moves.
-            </summary>
-            <param name="other_x"></param>
-            <param name="other_y"></param>
-            <param name="other_direction"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.Move.Equals(System.Object)">
-            <summary>
-            Compare two Move objects. 
-            If one of the Move objects does not have a direction that is set (i.e. direction == Move.Direction.NO_DIRECTION)
-            then the direction part of the Move is ignored.
-            </summary>
-            <param name="obj"></param>
-            <returns></returns>
-        </member>
         <member name="T:mapf.Program">
             <summary>
             This is the entry point of the application. 
@@ -2673,6 +2768,31 @@
             This is the starting point of the program. 
             </summary>
         </member>
+        <member name="T:mapf.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:mapf.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:mapf.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="M:mapf.RandomChoiceOfHeuristic`1.#ctor(mapf.IHeuristicCalculator{`0},mapf.IHeuristicCalculator{`0},System.Double,System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="first"></param>
+            <param name="second"></param>
+            <param name="p"></param>
+            <param name="seed"></param>
+        </member>
         <member name="T:mapf.Run">
             <summary>
             This class is responsible for running the experiments.
@@ -2698,6 +2818,11 @@
             This holds an open stream to the results file.
             </summary>
         </member>
+        <member name="F:mapf.Run.metaIDResultsWriter">
+            <summary>
+            This holds an open stream to the meta ID results file.
+            </summary>
+        </member>
         <member name="F:mapf.Run.rand">
             <summary>
             EH: I introduced this variable so that debugging and experiments
@@ -2715,7 +2840,7 @@
             </summary>
             <param name="fileName">The name of the results file</param>
         </member>
-        <member name="M:mapf.Run.CloseResultsFile">
+        <member name="M:mapf.Run.CloseResultsFile(System.IO.TextWriter)">
             <summary>
             Closes the results file.
             </summary>
@@ -2780,7 +2905,7 @@
             <param name="solver">The solver</param>
             <param name="instance">The problem instance that will be solved</param>
         </member>
-        <member name="M:mapf.Run.PrintResultsFileHeader">
+        <member name="M:mapf.Run.PrintResultsFileHeader(System.IO.TextWriter)">
             <summary>
             Print the header of the results file
             </summary>
@@ -2793,106 +2918,89 @@
             <param name="solver">The solver that solved the problem instance</param>
             <param name="runtimeInMillis">The time it took the given solver to solve the given instance</param>
         </member>
-        <member name="T:mapf.CostTreeSearchSolver">
+        <member name="T:mapf.SumIndividualCosts">
             <summary>
-            This class solves an instance of the MAPF problem using the increasing costs tree search algorithm.
+            This class forms a wrapper around problem.GetSingleAgentOptimalCost().
+            It represents the single shortest path heuristic, precomputed for every agent.
             </summary>
         </member>
-        <member name="M:mapf.CostTreeSearchSolver.GetName">
+        <member name="M:mapf.SumIndividualCosts.estimateSize">
             <summary>
-            Return the name of the solver, useful for outputting results.
+            Since this class simply refers via a table-lookup to the globally
+            available problem.GetSingleAgentOptimalCost class, we incur no memory.
             </summary>
-            <returns>The name of the solver</returns>
+            <returns>0 by definition.</returns>
         </member>
-        <member name="M:mapf.CostTreeSearchSolver.Setup(mapf.ProblemInstance,System.Int32,mapf.Run,System.Int32,System.Int32,mapf.MDD)">
+        <member name="M:mapf.SumIndividualCosts.build">
             <summary>
-            Setup the relevant data structures for a run.
-            </summary>
-            <param name="problemInstance"></param>
-            <param name="minTimeStep"></param>
-            <param name="runner"></param>
-            <param name="minCost">FIXME: Not taken into account, just added to comply with ICbsSolver</param>
-            <param name="maxCost">FIXME: Not taken into account, just added to comply with ICbsSolver</param>
-            <param name="mdd">FIXME: Not taken into account, just added to comply with ICbsSolver</param>
-        </member>
-        <member name="M:mapf.CostTreeSearchSolver.Clear">
-            <summary>
-            Clears the relevant data structures and variables to free memory usage.
+            The building function for this class doesn't do anything because we
+            are simply wrapping the functionality of the problem.GetSingleAgentOptimalCost
+            class.
             </summary>
         </member>
-        <member name="M:mapf.CostTreeSearchSolver.GetSolutionCost">
+        <member name="M:mapf.SumIndividualCosts.h(mapf.WorldState)">
             <summary>
-            Returns the cost of the solution found, or error codes otherwise.
+            Returns the heuristic estimate.
+            </summary>
+            <param name="s">The current state.</param>
+            <returns>The PDB entry for the given state.</returns>
+        </member>
+        <member name="M:mapf.SumIndividualCosts.OutputStatisticsHeader(System.IO.TextWriter)">
+            <summary>
+            Prints header of statistics of a single run to the given output. 
             </summary>
         </member>
-        <member name="M:mapf.CostTreeSearchSolver.OutputStatistics(System.IO.TextWriter)">
+        <member name="M:mapf.SumIndividualCosts.OutputStatistics(System.IO.TextWriter)">
             <summary>
-            Prints statistics of a single run to the given output. 
+            Prints statistics of a single run to the given output.
             </summary>
         </member>
-        <member name="M:mapf.CostTreeSearchSolver.Solve">
+        <member name="M:mapf.SumIndividualCosts.ClearStatistics">
             <summary>
-            Solves the instance that was set by a call to Setup()
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="T:mapf.CostTreeNodeSolver">
-            <summary>
-            This class tries to find a solution to a problem instance of a given cost. 
-            (this is used in the CostTreeSearchSolver)
+            Clears statistics.
             </summary>
         </member>
-        <member name="M:mapf.CostTreeNodeSolver.#ctor(mapf.ProblemInstance,mapf.Run,mapf.CostTreeSearchSolver,System.Int32[],mapf.CostTreeNode)">
+        <member name="T:mapf.MaxIndividualCosts">
             <summary>
-            
-            </summary>
-            <param name="problem"></param>
-            <param name="runner"></param>
-            <param name="solver"></param>
-            <param name="agentNums"></param>
-            <param name="costsNode">Of all the agents, not just the ones selected</param>
-        </member>
-        <member name="M:mapf.CostTreeNodeSolver.#ctor(mapf.ProblemInstance,mapf.CostTreeNode,mapf.Run,mapf.CostTreeSearchSolver)">
-            <summary>
-            Automatically calls Setup with the given costsNode
-            </summary>
-            <param name="problem"></param>
-            <param name="costNode">TODO: Maybe just pass the array of costs here?</param>
-            <param name="runner"></param>
-            <param name="solver"></param>
-        </member>
-        <member name="M:mapf.CostTreeNodeSolver.Solve(System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}},System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}})">
-            <summary>
-            Tries to find a solution for the agents with the given cost.
-            </summary>
-            <returns>The solution if found or null otherwise</returns>
-        </member>
-        <member name="T:mapf.CostTreeNodeSolverOldMatching">
-            <summary>
-            Use this one!
+            This class forms a wrapper around problem.GetSingleAgentOptimalCost().
+            It represents the single shortest path heuristic for makespan, precomputed for every agent.
             </summary>
         </member>
-        <member name="F:mapf.CostTreeNodeSolverOldMatching.syncSize">
+        <member name="M:mapf.MaxIndividualCosts.estimateSize">
             <summary>
-            Currently the only supported values are 3 and non-3. This is equivalent to bool checkTriples.
+            Since this class simply refers via a table-lookup to the globally
+            available problem.GetSingleAgentOptimalCost class, we incur no memory.
+            </summary>
+            <returns>0 by definition.</returns>
+        </member>
+        <member name="M:mapf.MaxIndividualCosts.build">
+            <summary>
+            The building function for this class doesn't do anything because we
+            are simply wrapping the functionality of the problem.GetSingleAgentOptimalCost
+            class.
             </summary>
         </member>
-        <member name="M:mapf.CostTreeNodeSolverOldMatching.Solve(System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}},System.Collections.Generic.Dictionary{mapf.TimedMove,System.Collections.Generic.List{System.Int32}})">
+        <member name="M:mapf.MaxIndividualCosts.h(mapf.WorldState)">
             <summary>
-            Prunes the individual agent MDDs and, if possible, matches them to return a non-conflicting configuration of
-            paths of the given costs.
+            Returns the heuristic estimate.
             </summary>
-            <param name="ID_CAT"></param>
-            <param name="CBS_CAT"></param>
-            <returns>
-            null if no solution is found.
-            </returns>
+            <param name="s">The current state.</param>
+            <returns>The PDB entry for the given state.</returns>
         </member>
-        <member name="M:mapf.CostTreeNodeSolverOldMatching.Prune">
+        <member name="M:mapf.MaxIndividualCosts.OutputStatisticsHeader(System.IO.TextWriter)">
             <summary>
-            Prunes the individual agent MDDs and prepares data for matching them
+            Prints header of statistics of a single run to the given output. 
             </summary>
-            <returns>Whether everything was pruned</returns>
+        </member>
+        <member name="M:mapf.MaxIndividualCosts.OutputStatistics(System.IO.TextWriter)">
+            <summary>
+            Prints statistics of a single run to the given output.
+            </summary>
+        </member>
+        <member name="M:mapf.MaxIndividualCosts.ClearStatistics">
+            <summary>
+            Clears statistics.
+            </summary>
         </member>
         <member name="T:mapf.TimedMove">
             <summary>
@@ -2964,109 +3072,6 @@
             and returns a list of agents this TimedMove collides with.
             </summary>
             <param name="timedMovesToAgentNumLists"></param>
-            <returns></returns>
-        </member>
-        <member name="F:mapf.IndependenceDetection.plan">
-            <summary>
-            The complete plan for all the agents that was found.
-            </summary>
-        </member>
-        <member name="M:mapf.IndependenceDetection.CalculateJointPlan">
-            <summary>
-            Calculate the full plan for all the agents that has been found by the algorithm
-            </summary>
-        </member>
-        <member name="M:mapf.IndependenceDetection.OutputStatistics(System.IO.TextWriter)">
-            <summary>
-            Prints statistics of a single run to the given output. 
-            </summary>
-        </member>
-        <member name="M:mapf.IndependenceDetection.GetMaxGroupSize">
-            <summary>
-            Also calculates min group size and max solution depth on the way.
-            FIXME: Code dup!
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.IndependenceDetection.FindConflictingGroups">
-            <summary>
-            Simulates the execution of the plans found for the different groups. 
-            If there are conflicting plans - return the conflicting groups.
-            </summary>
-            <returns>A conflict object with data about the found conflict, or null if no conflict exists</returns>
-        </member>
-        <member name="M:mapf.IndependenceDetection.SimpleID(mapf.Run)">
-            <summary>
-            Search for an optimal solution using the Simple Independence Detection algorithm from Trevor Standley's paper.
-            </summary>
-            <param name="runner"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.IndependenceDetection.ImprovedID(mapf.Run)">
-            <summary>
-            Search for an optimal solution using the Independence Detection algorithm in Standley's paper,
-            which utilises a CAT.
-            </summary>
-            <param name="runner"></param>
-            <returns></returns>
-        </member>
-        <member name="M:mapf.IndependenceDetection.JoinGroups(mapf.IndependenceDetectionConflict)">
-            <summary>
-            Join the conflicting groups into a single group
-            </summary>
-            <param name="conflict">An object that describes the conflict</param>
-            <returns>The composite group of agents</returns>
-        </member>
-        <member name="M:mapf.IndependenceDetection.Solve">
-            <summary>
-            Run the A* algorithm with Standley's ID and OD improvements.
-            </summary>
-            <returns>true if optimal solution has been found</returns>
-        </member>
-        <member name="T:mapf.IndependenceDetectionAgentsGroup">
-            <summary>
-            This class represents a group of agents that need to be solved together.
-            </summary>
-        </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.Solve(mapf.Run)">
-            <summary>
-            Solve the group of agents together.
-            </summary>
-            <param name="runner"></param>
-            <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
-        </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.SolveWithSelection(mapf.Run)">
-            <summary>
-            Solve the group of agents together.
-            </summary>
-            <param name="runner"></param>
-            <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
-        </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.GetPlan">
-            <summary>
-            Returns the plan for the group of agents. This is a collection of Moves for every time step until all the agents reach their goal.
-            </summary>
-        </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.Join(mapf.IndependenceDetectionAgentsGroup)">
-            <summary>
-            Joins this and another group to a single group with all of the agents together.
-            </summary>
-            <param name="other"></param>
-            <returns>A new AgentsGroup object with the agents from both this and the other group</returns>
-        </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.Size">
-            <summary>
-            Returns the number of agents in the group.
-            </summary>
-        </member>
-        <member name="M:mapf.IndependenceDetectionAgentsGroup.ReplanUnderConstraints(mapf.Plan,mapf.Run,System.Boolean)">
-            <summary>
-            Tries to find a plan for this group, that will not conflict with the given plan,
-            and still has the same solution cost as the current solution cost.
-            This is used in the ImprovedID() method.
-            </summary>
-            <param name="plan"></param>
-            <param name="runner"></param>
             <returns></returns>
         </member>
         <member name="T:mapf.WorldState">
@@ -3409,6 +3414,11 @@
             </summary>
             <param name="conflictAvoidance"></param>
             <returns></returns>
+        </member>
+        <member name="T:mapf.XGBoostTests">
+            <summary>
+            This class is responsible for running the experiments.
+            </summary>
         </member>
         <member name="M:ExtensionMethods.MyExtensions.MaxByKeyFunc``2(System.Collections.Generic.IEnumerable{``0},System.Func{``0,``1})">
             <summary>

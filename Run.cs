@@ -623,15 +623,17 @@ namespace mapf
 
             // ICTS + ID+AS 
             //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
-
+            SATSolver satSolver = new SATSolver();
             //// EPEA* + ID+AS
+            solvers.Add(satSolver);
             //solvers.Add(new IndependenceDetection(astar, epea,true));
 
             //// ICTS + ID 
-            solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
+            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
 
-            //// EPEA* + ID
-            solvers.Add(new IndependenceDetection(astar, epea));
+            //// EPEA* + ID 
+            //solvers.Add(new IndependenceDetection(astar, epea));
+            //solvers.Add(epea);
 
             //Adding CBS-H + ID:
             //solvers.Add(new IndependenceDetection(astar, new CBS(astar, astar_with_od, 
@@ -960,16 +962,19 @@ namespace mapf
 
                     if (solverSolutionCost >= 0) // Solved successfully
                     {
-                        Plan plan = solvers[i].GetPlan();
-                        int planSize = plan.GetSize();
-                        if (planSize < 10)
-                            plan.PrintPlan();
-                        else
-                            Console.WriteLine($"Plan is too long to print ({planSize} steps).");
-
-                        if (!string.IsNullOrEmpty(plan_fileName))
+                        if (solvers[i].GetType() != typeof(SATSolver))
                         {
-                            plan.PrintPlanTo(solvers[i].GetName() , plan_fileName);
+                            Plan plan = solvers[i].GetPlan();
+                            int planSize = plan.GetSize();
+                            if (planSize < 10)
+                                plan.PrintPlan();
+                            else
+                                Console.WriteLine($"Plan is too long to print ({planSize} steps).");
+
+                            if (!string.IsNullOrEmpty(plan_fileName))
+                            {
+                                plan.PrintPlanTo(solvers[i].GetName(), plan_fileName);
+                            }
                         }
                         outOfTimeCounters[i] = 0;
 

@@ -6654,4 +6654,34 @@ ERROR! occured at: 12/27/2019 4:58:36 PMSystem.NullReferenceException: Object re
    at mapf.Run.OpenResultsFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Run.cs:line 87
    at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 658
    at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
+   at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473ERROR! occured at: 1/14/2020 11:08:40 PMSystem.FormatException: Input string was not in a correct format.
+   at System.Number.StringToNumber(String str, NumberStyles options, NumberBuffer& number, NumberFormatInfo info, Boolean parseDecimal)
+   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
+   at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 476
+   at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
+   at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473ERROR! occured at: 1/14/2020 11:08:55 PMSystem.FormatException: Input string was not in a correct format.
+   at System.Number.StringToNumber(String str, NumberStyles options, NumberBuffer& number, NumberFormatInfo info, Boolean parseDecimal)
+   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
+   at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 476
+   at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
+   at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473ERROR! occured at: 1/14/2020 11:10:02 PMSystem.FormatException: Input string was not in a correct format.
+   at System.Number.StringToNumber(String str, NumberStyles options, NumberBuffer& number, NumberFormatInfo info, Boolean parseDecimal)
+   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
+   at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 476
+   at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
+   at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473ERROR! occured at: 1/14/2020 11:12:25 PMSystem.FormatException: Input string was not in a correct format.
+   at System.Number.StringToNumber(String str, NumberStyles options, NumberBuffer& number, NumberFormatInfo info, Boolean parseDecimal)
+   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
+   at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 476
+   at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
+   at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473ERROR! occured at: 1/14/2020 11:14:21 PMSystem.FormatException: Input string was not in a correct format.
+   at System.Number.StringToNumber(String str, NumberStyles options, NumberBuffer& number, NumberFormatInfo info, Boolean parseDecimal)
+   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
+   at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 476
+   at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
+   at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473ERROR! occured at: 1/14/2020 11:40:18 PMSystem.FormatException: Input string was not in a correct format.
+   at System.Number.StringToNumber(String str, NumberStyles options, NumberBuffer& number, NumberFormatInfo info, Boolean parseDecimal)
+   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
+   at mapf.ProblemInstance.ImportFromScenFile(String fileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 476
+   at mapf.ProblemInstance.Import(String filePath, String mapFilePath) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\ProblemInstance.cs:line 781
    at mapf.Program.RunNathanExperimentSet(String scenMapFileName) in C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\Program.cs:line 473

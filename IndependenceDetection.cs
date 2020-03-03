@@ -560,36 +560,36 @@ namespace mapf
             var model_path = Path.Combine(Environment.CurrentDirectory, "testing-clf.xgb");
 
             //selectionModel = new ClassificationXGBoostLearner();
-            //this.selectionModel = ClassificationXGBoostModel.Load(model_path);
+            this.selectionModel = ClassificationXGBoostModel.Load(model_path);
 
-            //this.simple = new SumIndividualCosts();
-            //this.epea = new EPEA_Star(this.simple);
-            //this.astar = new A_Star(this.simple);
-            //this.macbs = new CBS(this.astar, this.epea, 10);
-            //this.icts = new CostTreeSearchSolverOldMatching(3);
-            //this.cbs = new CBS(this.astar, this.epea);
-            //this.mvc_for_cbs = new MvcHeuristicForCbs();
+            this.simple = new SumIndividualCosts();
+            this.epea = new EPEA_Star(this.simple);
+            this.astar = new A_Star(this.simple);
+            this.macbs = new CBS(this.astar, this.epea, 10);
+            this.icts = new CostTreeSearchSolverOldMatching(3);
+            this.cbs = new CBS(this.astar, this.epea);
+            this.mvc_for_cbs = new MvcHeuristicForCbs();
 
-            ////for (int i = 0; i < astar_heuristics.Count; i++)
-            ////    astar_heuristics[i].Init(instance, agentList);
+            //for (int i = 0; i < astar_heuristics.Count; i++)
+                //astar_heuristics[i].Init(instance, agentList);
 
-            //this.cbsh = new CBS(astar, epea,
-            //    mergeThreshold: -1,
-            //    CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
-            //    doMalte: false,
-            //    CBS.ConflictChoice.CARDINAL_MDD,
-            //    this.mvc_for_cbs,
-            //    disableTieBreakingByMinOpsEstimate: true,
-            //    lookaheadMaxExpansions: 1,
-            //    mergeCausesRestart: true,
-            //    replanSameCostWithMdd: false,
-            //    cacheMdds: false,
-            //    useOldCost: false,
-            //    useCAT: true);
+            this.cbsh = new CBS(astar, epea,
+                mergeThreshold: -1,
+                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
+                doMalte: false,
+                CBS.ConflictChoice.CARDINAL_MDD,
+                this.mvc_for_cbs,
+                disableTieBreakingByMinOpsEstimate: true,
+                lookaheadMaxExpansions: 1,
+                mergeCausesRestart: true,
+                replanSameCostWithMdd: false,
+                cacheMdds: false,
+                useOldCost: false,
+                useCAT: true);
 
-            ////this.runner = runner;
-            //this.subproblem_id = subproblem_id;
-            //this.timeToSolver = 0;
+            this.runner = runner;
+            this.subproblem_id = subproblem_id;
+            this.timeToSolver = 0;
         }
 
         /// <summary>
@@ -660,7 +660,7 @@ namespace mapf
         {
             List<uint> agentList = Enumerable.Range(0, instance.agents.Length).Select(x => (uint)x).ToList(); // FIXME: Must the heuristics really receive a list of uints?
 
-            simple.Init(instance, agentList);
+            simple.Init(instance, agentList); //Important to init the heuristics before solving!
 
             switch (solverIndex)
             {
@@ -690,7 +690,10 @@ namespace mapf
         {
             ISolver relevantSolver = this.groupSolver;
             if (this.allAgentsState.Length == 1)
+            {
                 relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
+                relevantSolver.Setup(this.instance, runner);
+            }
             else
             {
                 var pred = this.selectionModel.Predict(instance.ml_features.ToArray());

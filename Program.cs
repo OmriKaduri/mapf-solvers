@@ -171,14 +171,14 @@ namespace mapf
 
         protected static readonly string[] daoMapPaths = {
             Path.Combine("..", "..", "maps", "den520d.map"),
-            Path.Combine("..", "..", "maps", "ost003d.map"),
-            Path.Combine("..", "..", "maps", "brc202d.map")
+            Path.Combine(@"..\", @"..\", "maps", "ost003d.map"),
+            Path.Combine(@"..\", @"..\", "maps", "brc202d.map")
         };
 
         protected static readonly string[] mazeMapPaths = {
-            Path.Combine("..", "..", "maps", "maze512-1-6.map"),
-            Path.Combine("..", "..", "maps", "maze512-1-2.map"),
-            Path.Combine("..", "..", "maps", "maze512-1-9.map")
+            Path.Combine(@"..\", @"..\", "maps", "maze512-1-6.map"),
+            Path.Combine(@"..\", @"..\", "maps", "maze512-1-2.map"),
+            Path.Combine(@"..\", @"..\", "maps", "maze512-1-9.map")
         };
 
         protected static readonly string[] scenDirs = {
@@ -446,7 +446,7 @@ namespace mapf
             }
             else if (runNathan == true)
             {
-                string[] scenDirs = { Path.Combine("scen", "scen1") };
+                string[] scenDirs = { Path.Combine(@"..","scen", "scen1") };
                 foreach (var dirName in scenDirs)
                 {
                     foreach (   var scenPath in Directory.GetFiles(dirName))
@@ -470,7 +470,7 @@ namespace mapf
         {
             try
             {
-                ProblemInstance.Import(Directory.GetCurrentDirectory() + "\\" + scenMapFileName);
+                ProblemInstance.Import(Path.Combine(Directory.GetCurrentDirectory(), scenMapFileName));
             }
             catch (Exception e)
             {

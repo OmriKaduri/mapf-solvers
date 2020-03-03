@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace mapf
 {
@@ -20,7 +21,7 @@ namespace mapf
 
         public static readonly string GRID_NAME_KEY = "Grid Name";
         public static readonly string INSTANCE_NAME_KEY = "Instance Name";
-
+        public static readonly string SAT_FILE_NAME = "Sat File Name";
         /// <summary>
         /// This contains extra data of this problem instance (used for special problem instances, e.g. subproblems of a bigger problem instance).
         /// </summary>
@@ -155,7 +156,8 @@ namespace mapf
             agentDistancesToGoal = new int[agents.Length];
             distanceBetweenAgentGoals = new int[agents.Length, agents.Length];
             distanceBetweenAgentStartPoints = new int[agents.Length, agents.Length];
-
+            this.singleAgentOptimalCosts = new int[this.GetNumOfAgents()][];
+            this.singleAgentOptimalMoves = new Move[this.GetNumOfAgents()][];
             ml_features = new List<double>();
         }
 
@@ -165,76 +167,89 @@ namespace mapf
         /// </summary>
         public void ComputeSingleAgentShortestPaths()
         {
-            Debug.WriteLine("Computing the single agent shortest path for all agents...");
+            Console.WriteLine("Computing the single agent shortest path for all agents...");
             Stopwatch watch = Stopwatch.StartNew();
             double startTime = watch.Elapsed.TotalMilliseconds;
             //return; // Add for generator
 
-            this.singleAgentOptimalCosts = new int[this.GetNumOfAgents()][];
-            this.singleAgentOptimalMoves = new Move[this.GetNumOfAgents()][];
-
             for (int agentId = 0; agentId < this.GetNumOfAgents(); agentId++)
             {
-                // Run a single source shortest path algorithm from the _goal_ of the agent
-                var shortestPathLengths = new int[this.numLocations];
-                var optimalMoves = new Move[this.numLocations];
-                for (int i = 0; i < numLocations; i++)
-                    shortestPathLengths[i] = -1;
-                var openlist = new Queue<AgentState>();
 
-                // Create initial state
-                var agentStartState = this.agents[agentId];
-                var agent = agentStartState.agent;
-                var goalState = new AgentState(agent.Goal.x, agent.Goal.y, -1, -1, agentId);
-                int goalIndex = this.GetCardinality(goalState.lastMove);
-                shortestPathLengths[goalIndex] = 0;
-                optimalMoves[goalIndex] = new Move(goalState.lastMove);
-                openlist.Enqueue(goalState);
-
-                while (openlist.Count > 0)
+                int[] shortestPathLengths;
+                Move[] optimalMoves;
+                AgentState agentStartState = this.agents[agentId];
+                int start;
+                if (this.agentDistancesToGoal[agentId] == 0)
                 {
-                    AgentState state = openlist.Dequeue();
+                    singleAgentShortestPath(agentId, out shortestPathLengths, out optimalMoves, out agentStartState, out start);
 
-                    // Generate child states
-                    foreach (TimedMove aMove in state.lastMove.GetNextMoves())
-                    {
-                        if (IsValid(aMove))
-                        {
-                            int entry = cardinality[aMove.x, aMove.y];
-                            // If move will generate a new or better state - add it to the queue
-                            if ((shortestPathLengths[entry] == -1) || (shortestPathLengths[entry] > state.g + 1))
-                            {
-                                var childState = new AgentState(state);
-                                childState.MoveTo(aMove);
-                                shortestPathLengths[entry] = childState.g;
-                                optimalMoves[entry] = new Move(aMove.GetOppositeMove());
-                                openlist.Enqueue(childState);
-                            }
-                        }
-                    }
-
+                    this.agentDistancesToGoal[agentId] = shortestPathLengths[start];
+                    this.singleAgentOptimalCosts[agentId] = shortestPathLengths;
+                    this.singleAgentOptimalMoves[agentId] = optimalMoves;
                 }
-
-                int start = this.GetCardinality(agentStartState.lastMove);
-                if (shortestPathLengths[start] == -1)
-                {
-                    throw new Exception($"Unsolvable instance! Agent {agentId} cannot reach its goal");
-                    // Note instances can still be unsolvable if this isn't reached. E.g. this corridor:
-                    // s1-g2-g1-s2
-                }
-
-                this.agentDistancesToGoal[agentId] = shortestPathLengths[start];
-                this.singleAgentOptimalCosts[agentId] = shortestPathLengths;
-                this.singleAgentOptimalMoves[agentId] = optimalMoves;
                 for (int otherAgentId = 0; otherAgentId < this.GetNumOfAgents(); otherAgentId++)
                 {
                     var otherAgentState = this.agents[otherAgentId];
+                    if (this.distanceBetweenAgentGoals[agentId, otherAgentId] != 0) 
+                        continue; // skip already computed
                     this.distanceBetweenAgentGoals[agentId, otherAgentId] = GetSingleAgentOptimalCost(agentId, otherAgentState.agent.Goal); //Distance from this agent to other agent goal
                     this.distanceBetweenAgentStartPoints[agentId, otherAgentId] = ShortestPathFromAToB(agentStartState, otherAgentState.lastMove);
                 }
             }
             double endTime = watch.Elapsed.TotalMilliseconds;
             this.shortestPathComputeTime = endTime - startTime;
+            Console.WriteLine("Time to calc sp: {0}", shortestPathComputeTime);
+        }
+
+        private void singleAgentShortestPath(int agentId, out int[] shortestPathLengths, out Move[] optimalMoves, out AgentState agentStartState, out int start)
+        {
+            // Run a single source shortest path algorithm from the _goal_ of the agent
+            shortestPathLengths = new int[this.numLocations];
+            optimalMoves = new Move[this.numLocations];
+            for (int i = 0; i < numLocations; i++)
+                shortestPathLengths[i] = -1;
+            var openlist = new Queue<AgentState>();
+
+            // Create initial state
+            agentStartState = this.agents[agentId];
+            var agent = agentStartState.agent;
+            var goalState = new AgentState(agent.Goal.x, agent.Goal.y, -1, -1, agentId);
+            int goalIndex = this.GetCardinality(goalState.lastMove);
+            shortestPathLengths[goalIndex] = 0;
+            optimalMoves[goalIndex] = new Move(goalState.lastMove);
+            openlist.Enqueue(goalState);
+
+            while (openlist.Count > 0)
+            {
+                AgentState state = openlist.Dequeue();
+
+                // Generate child states
+                foreach (TimedMove aMove in state.lastMove.GetNextMoves())
+                {
+                    if (IsValid(aMove))
+                    {
+                        int entry = cardinality[aMove.x, aMove.y];
+                        // If move will generate a new or better state - add it to the queue
+                        if ((shortestPathLengths[entry] == -1) || (shortestPathLengths[entry] > state.g + 1))
+                        {
+                            var childState = new AgentState(state);
+                            childState.MoveTo(aMove);
+                            shortestPathLengths[entry] = childState.g;
+                            optimalMoves[entry] = new Move(aMove.GetOppositeMove());
+                            openlist.Enqueue(childState);
+                        }
+                    }
+                }
+
+            }
+
+            start = this.GetCardinality(agentStartState.lastMove);
+            if (shortestPathLengths[start] == -1)
+            {
+                throw new Exception($"Unsolvable instance! Agent {agentId} cannot reach its goal");
+                // Note instances can still be unsolvable if this isn't reached. E.g. this corridor:
+                // s1-g2-g1-s2
+            }
         }
 
 
@@ -475,7 +490,8 @@ namespace mapf
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
             int instanceId = int.Parse(fileNameWithoutExtension.Split('-').Last());
             string mapfileName = fileNameWithoutExtension.Substring(0, length: fileNameWithoutExtension.LastIndexOf("-even"));  // Passing a length parameter is like specifying a non-inclusive end index
-            string mapFilePath = Path.Combine(Path.GetDirectoryName(fileName), "..", "..", "maps", mapfileName + ".map");
+            Console.WriteLine(mapfileName);
+            string mapFilePath = Path.Combine(Path.GetDirectoryName(fileName), @"..", @"..", "maps", mapfileName + ".map");
             Console.WriteLine("map file path {0} {1}", Path.GetDirectoryName(fileName), mapFilePath);
             bool[][] grid;
             string line;
@@ -553,6 +569,7 @@ namespace mapf
                 int mapCols;
                 double optimalCost;  // Assuming diagonal moves are allowed and cost sqrt(2)
                 List<string> lines = new List<string>();
+                ProblemInstance instance = new ProblemInstance();
 
                 while (true)
                 {
@@ -560,54 +577,9 @@ namespace mapf
                     if (string.IsNullOrWhiteSpace(line))
                         break;
                     lines.Add(line);
-                    //lineParts = line.Split('\t');
-                    //block = int.Parse(lineParts[0]);
-                    //mapFileName = lineParts[1];
-                    //mapRows = int.Parse(lineParts[2]);
-                    //Debug.Assert(mapRows == maxX);
-                    //mapCols = int.Parse(lineParts[3]);
-                    //Debug.Assert(mapRows == maxY);
-
-                    //startY = int.Parse(lineParts[4]);
-                    //startX = int.Parse(lineParts[5]);
-                    //goalY = int.Parse(lineParts[6]);
-                    //goalX = int.Parse(lineParts[7]);
-                    //optimalCost = double.Parse(lineParts[8]);
-                    //agent = new Agent(goalX, goalY, agentNum);
-                    //state = new AgentState(startX, startY, agent);
-                    //stateList.Add(state);
-                    //agentNum++;
-                    //String instanceName;
-                    //bool resultsFileExisted = File.Exists(Program.RESULTS_FILE_NAME);
-                    //runner.OpenResultsFile(Program.RESULTS_FILE_NAME);
-
-                    //if (resultsFileExisted == false)
-                    //    runner.PrintResultsFileHeader();
-                    //runner.CloseResultsFile();
-                    //TextWriter output;
-
-                    //string[] cur_lineParts = null;
-
-                    //Console.WriteLine("Starting scen with {0} agents", agentNum);
-                    //// Generate the problem instance
-                    //ProblemInstance instance = new ProblemInstance();
-                    //instance.Init(stateList.ToArray(), grid);
-                    //instance.instanceId = instanceId;
-                    //instance.parameters[ProblemInstance.GRID_NAME_KEY] = mapfileName;
-                    //instance.parameters[ProblemInstance.INSTANCE_NAME_KEY] = fileNameWithoutExtension + ".scen";
-                    //instance.ComputeSingleAgentShortestPaths();
-                    //runner.OpenResultsFile(Program.RESULTS_FILE_NAME);
-                    //if (resultsFileExisted == false)
-                    //    runner.PrintResultsFileHeader();
-                    //Boolean solved = runner.SolveGivenProblem(instance);
-                    //runner.CloseResultsFile();
-                    //if (!solved)
-                    //{
-                    //    break;
-                    //}
                 }
-                Console.WriteLine("Found {0} agents", lines.Count);
 
+                Console.WriteLine("Found {0} agents", lines.Count);
                 
                 for (int i = 2; i < lines.Count+1; i++)
                 {
@@ -664,12 +636,62 @@ namespace mapf
 
                     Console.WriteLine("Starting scen with {0} agents", i);
                     // Generate the problem instance
-                    ProblemInstance instance = new ProblemInstance();
-                    instance.Init(stateList.ToArray(), grid);
+                    /////------------- Generate SAT file from scen+map
+                    var scen_files_dir = Directory.GetParent(filename_without_extension);
+                    var sat_mpf_fileName = "";
+                    if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        sat_mpf_fileName = Path.Combine(scen_files_dir.ToString(), "sat_files", Path.GetFileName(filename_without_extension)
+                       + String.Format("_a_{0}.mpf", i));
+                        if (!File.Exists(sat_mpf_fileName))
+                        {
+                            var process = new Process();
+                            //Console.WriteLine("Converting {0} to SAT file", fileName);
+
+                            String commandArgs = String.Format("--input-movi-map-file={0}" +
+                                " --input-movi-scen-file={1}" +
+                                " --output-mpf-file={2}" +
+                                " --N-agents={3}", mapFilePath, fileName, sat_mpf_fileName, i);
+                            //Console.WriteLine(commandArgs);
+                            process.StartInfo.FileName = "moviscen_convert_boOX";
+                            process.StartInfo.Arguments = commandArgs;
+                            process.StartInfo.CreateNoWindow = true;
+                            process.StartInfo.UseShellExecute = false;
+
+                            process.StartInfo.RedirectStandardOutput = true;
+                            process.OutputDataReceived += (sender, data) =>
+                            {
+                                Console.WriteLine(data.Data);
+                            };
+                            process.StartInfo.RedirectStandardError = true;
+                            process.ErrorDataReceived += (sender, data) =>
+                            {
+                                Console.WriteLine(data.Data);
+                            };
+
+                            process.Start();
+                            process.BeginOutputReadLine();
+                            process.BeginErrorReadLine();
+                            //bool successInTime = process.WaitForExit(Constants.MAX_TIME);
+                            process.Close();
+                        }
+                    }
+                    /////------------- Generate SAT file from scen+map
+                    if (instance.agents == null) //Should init the ProblemInstance
+                    {
+                        instance.Init(stateList.ToArray(), grid);
+                        instance.ComputeSingleAgentShortestPaths();
+
+                    }
+                    else
+                    {
+                        instance.AddSingleAgent(stateList.Last()); 
+                    }
+                    instance.parameters[ProblemInstance.SAT_FILE_NAME] = sat_mpf_fileName;
+
                     instance.instanceId = instanceId;
                     instance.parameters[ProblemInstance.GRID_NAME_KEY] = mapfileName;
                     instance.parameters[ProblemInstance.INSTANCE_NAME_KEY] = fileNameWithoutExtension + ".scen";
-                    instance.ComputeSingleAgentShortestPaths();
                     runner.OpenResultsFile(Program.RESULTS_FILE_NAME);
                     Boolean solved = runner.SolveGivenProblem(instance, plan_fileName);
                     runner.CloseResultsFile();
@@ -685,7 +707,39 @@ namespace mapf
             return null;
         }
 
+        private void AddSingleAgent(AgentState agentState)
+        {
+            //TODO: Compute shortest path and add to list
+            
+            Array.Resize(ref this.agents, this.agents.Length + 1);
+            Array.Resize(ref this.agentDistancesToGoal, this.agentDistancesToGoal.Length + 1) ;
+            ResizeMatrix(ref this.singleAgentOptimalCosts, this.agents.Length);
+            ResizeMatrix(ref this.singleAgentOptimalMoves, this.agents.Length);
+            ResizeArray(ref this.distanceBetweenAgentGoals, this.agents.Length, this.agents.Length);
+            ResizeArray(ref this.distanceBetweenAgentStartPoints, this.agents.Length, this.agents.Length);
 
+            agents[this.agents.Length-1] = agentState;
+            this.ComputeSingleAgentShortestPaths();
+        }
+
+        void ResizeArray<T>(ref T[,] original, int newCoNum, int newRoNum)
+        {
+            var newArray = new T[newCoNum, newRoNum];
+            int columnCount = original.GetLength(1);
+            int columnCount2 = newRoNum;
+            int columns = original.GetUpperBound(0);
+            for (int co = 0; co <= columns; co++)
+                Array.Copy(original, co * columnCount, newArray, co * columnCount2, columnCount);
+            original = newArray;
+        }
+
+        void ResizeMatrix<T>(ref T[][] original, int newRowNum)
+        {
+            var newArray = new T[newRowNum][];
+            for (int i = 0; i < original.Length; i++)
+                newArray[i] = original[i];
+            original = newArray;
+        }
         /// <summary>
         /// Imports a problem instance from a given file
         /// </summary>

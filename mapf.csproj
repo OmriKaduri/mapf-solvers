@@ -87,29 +87,8 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
-  <PropertyGroup>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="SharpLearning.Common.Interfaces, Version=0.31.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\SharpLearning.Common.Interfaces.0.31.7\lib\net461\SharpLearning.Common.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpLearning.Containers, Version=0.31.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\SharpLearning.Containers.0.31.7\lib\net461\SharpLearning.Containers.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpLearning.DecisionTrees, Version=0.31.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\SharpLearning.DecisionTrees.0.31.7\lib\net461\SharpLearning.DecisionTrees.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpLearning.GradientBoost, Version=0.31.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\SharpLearning.GradientBoost.0.31.7\lib\net461\SharpLearning.GradientBoost.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpLearning.InputOutput, Version=0.31.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\SharpLearning.InputOutput.0.31.7\lib\net461\SharpLearning.InputOutput.dll</HintPath>
-    </Reference>
-    <Reference Include="SharpLearning.XGBoost, Version=0.31.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\SharpLearning.XGBoost.0.31.7\lib\net461\SharpLearning.XGBoost.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -127,9 +106,6 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="XGBoost, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\PicNet.XGBoost.0.2.1\lib\XGBoost.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Agent.cs" />
@@ -183,7 +159,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="XGBoost-tests.cs" />
     <Compile Include="SumIndividualCosts.cs" />
     <Compile Include="EnumeratedPDB.cs" />
     <Compile Include="PDB.cs" />
