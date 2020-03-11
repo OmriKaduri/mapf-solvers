@@ -303,6 +303,9 @@ namespace mapf
                 subGroups[this.agentsGroupAssignment[i]].Add(problem.agents[i]);
             }
 
+            bool underID = problem.parameters.ContainsKey(IndependenceDetection.ILLEGAL_MOVES_KEY) &&
+                (((HashSet<TimedMove>)problem.parameters[IndependenceDetection.ILLEGAL_MOVES_KEY]).Count != 0);
+
             bool success = true;
 
             int maxPlanSize = -1;
@@ -318,6 +321,7 @@ namespace mapf
                 // Solve for a single agent:
                 if (agentGroupHasConstraints == false  &&
                     agentGroupHasMustConstraints == false &&
+                    underID == false &&
                     subGroup.Count == 1) // Top-most CBS with no must constraints on this agent. Shortcut available (that doesn't consider the CAT, though)
                 {
                     allSingleAgentPlans[i] = new SinglePlan(problem.agents[i]); // All moves up to starting pos, if any
