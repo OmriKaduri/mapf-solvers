@@ -52,7 +52,6 @@ namespace mapf
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
             this.withSelection = withSelection;
-
         }
 
         public void Clear()
@@ -78,7 +77,7 @@ namespace mapf
                     new IndependenceDetectionAgentsGroup(
                         this.instance, new AgentState[1] { agentStartState },
                         this.singleAgentSolver, this.groupSolver, runner, 0));
-
+            
             this.subproblem_id = 0;
 
         }
@@ -86,7 +85,7 @@ namespace mapf
         public virtual String GetName() {
             if (this.withSelection)
             {
-                return groupSolver.GetName() + "+ID+AS";
+                return "ID+AS"; //Group solver has no meaning when it is choosed by AS
             }
             else
             {
@@ -388,7 +387,7 @@ namespace mapf
                     }
                 }
 
-                // Groups are conflicting - need to join them to a single group
+                // Groups are conflicting - need to join them to a single group (If code is here, coulnd't resolve by either conflicts)
                 allGroups.Remove(conflict.group1);
                 allGroups.Remove(conflict.group2);
                 // Remove both groups from avoidance table
@@ -587,7 +586,7 @@ namespace mapf
                 useOldCost: false,
                 useCAT: true);
 
-            this.runner = runner;
+            //this.runner = runner;
             this.subproblem_id = subproblem_id;
             this.timeToSolver = 0;
         }
@@ -696,11 +695,20 @@ namespace mapf
             }
             else
             {
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
+                stopwatch.Stop();
+                Console.WriteLine("Time to predict which solver to use: {0} ms", stopwatch.ElapsedMilliseconds);
+                stopwatch.Start();
 
                 Console.WriteLine($"-----------------AS in ID-{solverNameByIndex(pred)}-----------------");
                 relevantSolver = solverByIndex(pred, this.instance);
+
                 relevantSolver.Setup(this.instance, runner); //TODO: Move setup to ctor
+                stopwatch.Stop();
+                Console.WriteLine("Time to setup solver: {0} ms", stopwatch.ElapsedMilliseconds);
             }
             bool solved = relevantSolver.Solve();
             this.solutionCost = relevantSolver.GetSolutionCost();

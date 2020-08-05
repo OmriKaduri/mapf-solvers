@@ -584,6 +584,10 @@ namespace mapf
                 for (int i = 2; i < lines.Count+1; i++)
                 {
                     agentNum = 0;
+                    if (i > 1000)
+                    {
+                        break;
+                    }
                     stateList = new List<AgentState>();
                     //var rand_lines = lines.AsEnumerable().OrderBy(n => Guid.NewGuid()).Take(i).Cast<String>().ToList();
                     var rand_lines = lines.Take(i);

@@ -621,18 +621,16 @@ namespace mapf
             // MA - CBS - Global - 10 / (EPEA */ SIC) choosing the first conflict in CBS nodes
             //solvers.Add(new CBS(astar, epea, 10));
 
-            // ICTS + ID+AS 
-            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3),true));
             SATSolver satSolver = new SATSolver();
-            //// EPEA* + ID+AS
-            solvers.Add(satSolver);
-            //solvers.Add(new IndependenceDetection(astar, epea,true));
+            //solvers.Add(satSolver);
+            // ID+AS (EPEA is just a placeholder, should be removed)
+            //solvers.Add(new IndependenceDetection(astar, epea, true));
 
             //// ICTS + ID 
             //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
 
             //// EPEA* + ID 
-            //solvers.Add(new IndependenceDetection(astar, epea));
+            solvers.Add(new IndependenceDetection(astar, epea));
             //solvers.Add(epea);
 
             //Adding CBS-H + ID:
