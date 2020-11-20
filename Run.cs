@@ -615,26 +615,32 @@ namespace mapf
             //solvers.Add(new MACBS_WholeTreeThreshold(new A_Star(), 1, 1)); // Run this!
 
             //A_Star solver;
-            //solver = new A_Star_WithOD(simple);
-           var mvc_for_cbs = new MvcHeuristicForCbs();
+            //solvers.Add(new IndependenceDetection(astar_with_od,astar_with_od));
+            var mvc_for_cbs = new MvcHeuristicForCbs();
 
             // MA - CBS - Global - 10 / (EPEA */ SIC) choosing the first conflict in CBS nodes
             //solvers.Add(new CBS(astar, epea, 10));
 
+            // Basic-CBS/(A*+OD/SIC) choosing the first conflict in CBS nodes
+            // solvers.Add(new CBS(astar_with_od, astar_with_od));
+
+            // LazyCBS
+            solvers.Add(new LazyCBS_Solver());
+
+
             SATSolver satSolver = new SATSolver();
-            //solvers.Add(satSolver);
+            solvers.Add(satSolver);
             // ID+AS (EPEA is just a placeholder, should be removed)
             //solvers.Add(new IndependenceDetection(astar, epea, true));
 
             //// ICTS + ID 
             //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
 
-            //// EPEA* + ID 
+            //// EPEA*+ID
             solvers.Add(new IndependenceDetection(astar, epea));
-            //solvers.Add(epea);
 
-            //Adding CBS-H + ID:
-            //solvers.Add(new IndependenceDetection(astar, new CBS(astar, astar_with_od, 
+            //Adding CBS-H:
+            //solvers.Add(new CBS(astar, astar_with_od, 
             //    mergeThreshold: -1, 
             //    CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
             //    doMalte: false, 
@@ -646,7 +652,7 @@ namespace mapf
             //    replanSameCostWithMdd: false,
             //    cacheMdds: false,
             //    useOldCost: false,
-            //    useCAT: true)));
+            //    useCAT: true));
 
             //Adding CBS-H:
             //mergeThreshold = -1, #CBS-H is with -1, MA-CBS-H is with 10
@@ -886,18 +892,18 @@ namespace mapf
             Console.WriteLine($"Solving {instance}");
             this.PrintProblemStatistics(instance);
 
-            if (!File.Exists(Program.METAIDRESULTS_FILE_NAME))
-            {
-                this.OpenMetaIDResultsFile();
-                this.PrintMetaIDResultsFileHeader();
-                this.ContinueToNextLine(this.metaIDResultsWriter);
-                this.CloseMetaIDResultsFile();
-            }
+            //if (!File.Exists(Program.METAIDRESULTS_FILE_NAME))
+            //{
+            //    this.OpenMetaIDResultsFile();
+            //    this.PrintMetaIDResultsFileHeader();
+            //    this.ContinueToNextLine(this.metaIDResultsWriter);
+            //    this.CloseMetaIDResultsFile();
+            //}
 
-            this.OpenMetaIDResultsFile();
-            this.PrintProblemStatistics(instance, this.metaIDResultsWriter);
-            this.ContinueToNextLine(this.metaIDResultsWriter);
-            this.CloseMetaIDResultsFile();
+            //this.OpenMetaIDResultsFile();
+            //this.PrintProblemStatistics(instance, this.metaIDResultsWriter);
+            //this.ContinueToNextLine(this.metaIDResultsWriter);
+            //this.CloseMetaIDResultsFile();
 
             // Initializing all heuristics, whereever they're used
             for (int i = 0; i < astar_heuristics.Count; i++)
@@ -960,7 +966,7 @@ namespace mapf
 
                     if (solverSolutionCost >= 0) // Solved successfully
                     {
-                        if (solvers[i].GetType() != typeof(SATSolver))
+                        if ((solvers[i].GetType() != typeof(SATSolver)) && (solvers[i].GetType()!=typeof(LazyCBS_Solver)))
                         {
                             Plan plan = solvers[i].GetPlan();
                             int planSize = plan.GetSize();
@@ -1150,9 +1156,10 @@ namespace mapf
             }
             List<String> headers = new List<String>(){
                 "GridName", "GridRows", "GridColumns", "NumOfAgents", "NumOfObstacles", "InstanceId",
-                "BranchingFactor","ObstacleDensity", "AvgDistanceToGoal",
-                "MaxDistanceToGoal","MinDistanceToGoal","AvgStartDistances",
-                "AvgGoalDistances","PointsAtSPRatio","Sparsity"};
+                //"BranchingFactor","ObstacleDensity", "AvgDistanceToGoal",
+                //"MaxDistanceToGoal","MinDistanceToGoal","AvgStartDistances",
+                //"AvgGoalDistances","PointsAtSPRatio","Sparsity"
+            };
 
             foreach (string header in headers)
             {
@@ -1243,52 +1250,52 @@ namespace mapf
             // Instance Id col:
             writer.Write(instance.instanceId + RESULTS_DELIMITER);
 
-            // Branching Factor col:
-            int numberOfLegalMoves = Constants.ALLOW_DIAGONAL_MOVE ? Move.NUM_DIRECTIONS : Move.NUM_NON_DIAG_MOVES;
-            var branchingFactor = Math.Pow(numberOfLegalMoves, numberOfAgents);
-            this.writeCellToCsv(branchingFactor, writer);
-            instance.AddFeature(branchingFactor);
+            //// Branching Factor col:
+            //int numberOfLegalMoves = Constants.ALLOW_DIAGONAL_MOVE ? Move.NUM_DIRECTIONS : Move.NUM_NON_DIAG_MOVES;
+            //var branchingFactor = Math.Pow(numberOfLegalMoves, numberOfAgents);
+            //this.writeCellToCsv(branchingFactor, writer);
+            //instance.AddFeature(branchingFactor);
 
-            // Obstacle Density col:
-            var obstacleDensity = (float)numOfObstacles / (float)gridSize;
-            this.writeCellToCsv(obstacleDensity, writer);
-            instance.AddFeature(obstacleDensity);
+            //// Obstacle Density col:
+            //var obstacleDensity = (float)numOfObstacles / (float)gridSize;
+            //this.writeCellToCsv(obstacleDensity, writer);
+            //instance.AddFeature(obstacleDensity);
 
-            // AvgDistanceToGoal col:
-            var avgDistanceToGoal = instance.agentDistancesToGoal.Average();
-            this.writeCellToCsv(avgDistanceToGoal, writer);
-            instance.AddFeature(avgDistanceToGoal);
+            //// AvgDistanceToGoal col:
+            //var avgDistanceToGoal = instance.agentDistancesToGoal.Average();
+            //this.writeCellToCsv(avgDistanceToGoal, writer);
+            //instance.AddFeature(avgDistanceToGoal);
 
-            // MaxDistanceToGoal col
-            var maxDistanceToGoal = instance.agentDistancesToGoal.Max();
-            this.writeCellToCsv(maxDistanceToGoal, writer);
-            instance.AddFeature(maxDistanceToGoal);
+            //// MaxDistanceToGoal col
+            //var maxDistanceToGoal = instance.agentDistancesToGoal.Max();
+            //this.writeCellToCsv(maxDistanceToGoal, writer);
+            //instance.AddFeature(maxDistanceToGoal);
 
-            // MinDistanceToGoal col
-            var minDistanceToGoal = instance.agentDistancesToGoal.Min();
-            this.writeCellToCsv(minDistanceToGoal, writer);
-            instance.AddFeature(minDistanceToGoal);
+            //// MinDistanceToGoal col
+            //var minDistanceToGoal = instance.agentDistancesToGoal.Min();
+            //this.writeCellToCsv(minDistanceToGoal, writer);
+            //instance.AddFeature(minDistanceToGoal);
 
-            // AvgStartDistances col:
-            var avgStartDistances = instance.AverageStartDistances();
-            this.writeCellToCsv(avgStartDistances, writer);
-            instance.AddFeature(avgStartDistances);
+            //// AvgStartDistances col:
+            //var avgStartDistances = instance.AverageStartDistances();
+            //this.writeCellToCsv(avgStartDistances, writer);
+            //instance.AddFeature(avgStartDistances);
 
-            // AvgGoalDistances col:
-            var avgGoalDistances = instance.AverageGoalDistances();
-            this.writeCellToCsv(avgGoalDistances, writer);
-            instance.AddFeature(avgGoalDistances);
+            //// AvgGoalDistances col:
+            //var avgGoalDistances = instance.AverageGoalDistances();
+            //this.writeCellToCsv(avgGoalDistances, writer);
+            //instance.AddFeature(avgGoalDistances);
 
-            // PointsAtSPRatio col:
-            var sp_ratio = instance.RatioOfPointsAtSP();
-            this.writeCellToCsv(sp_ratio, writer);
-            instance.AddFeature(sp_ratio);
+            //// PointsAtSPRatio col:
+            //var sp_ratio = instance.RatioOfPointsAtSP();
+            //this.writeCellToCsv(sp_ratio, writer);
+            //instance.AddFeature(sp_ratio);
 
-            //Sparsity
-            //df['Sparsity'] = df.apply(lambda x: x['NumOfAgents'] / (x['GridSize'] - x['NumOfObstacles']), axis = 1)
-            var sparsity = (double)numOfAgents / (double)(gridSize - numOfObstacles);
-            this.writeCellToCsv(sparsity, writer);
-            instance.AddFeature(sparsity);
+            ////Sparsity
+            ////df['Sparsity'] = df.apply(lambda x: x['NumOfAgents'] / (x['GridSize'] - x['NumOfObstacles']), axis = 1)
+            //var sparsity = (double)numOfAgents / (double)(gridSize - numOfObstacles);
+            //this.writeCellToCsv(sparsity, writer);
+            //instance.AddFeature(sparsity);
 
         }
 

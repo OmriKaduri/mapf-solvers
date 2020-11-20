@@ -3,8 +3,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
-using SharpLearning.XGBoost.Learners;
-using SharpLearning.XGBoost.Models;
+//using SharpLearning.XGBoost.Learners;
+//using SharpLearning.XGBoost.Models;
 
 namespace mapf
 {
@@ -534,10 +534,12 @@ namespace mapf
         private ISolver groupSolver;
         private Plan plan;
 
-        ClassificationXGBoostModel selectionModel;
+        //ClassificationXGBoostModel selectionModel;
         private SumIndividualCosts simple;
         private EPEA_Star epea;
         private A_Star astar;
+        private A_Star_WithOD astar_with_od;
+
         private CBS macbs;
         private CostTreeSearchSolverOldMatching icts;
         private CBS cbs;
@@ -559,11 +561,12 @@ namespace mapf
             var model_path = Path.Combine(Environment.CurrentDirectory, "testing-clf.xgb");
 
             //selectionModel = new ClassificationXGBoostLearner();
-            this.selectionModel = ClassificationXGBoostModel.Load(model_path);
+            //this.selectionModel = ClassificationXGBoostModel.Load(model_path);
 
-            this.simple = new SumIndividualCosts();
+            this.simple = new SumIndividualCosts(); //Should get form Runner!
             this.epea = new EPEA_Star(this.simple);
             this.astar = new A_Star(this.simple);
+            this.astar_with_od = new A_Star_WithOD(this.simple);
             this.macbs = new CBS(this.astar, this.epea, 10);
             this.icts = new CostTreeSearchSolverOldMatching(3);
             this.cbs = new CBS(this.astar, this.epea);
@@ -572,7 +575,7 @@ namespace mapf
             //for (int i = 0; i < astar_heuristics.Count; i++)
                 //astar_heuristics[i].Init(instance, agentList);
 
-            this.cbsh = new CBS(astar, epea,
+            this.cbsh = new CBS(astar, astar_with_od,
                 mergeThreshold: -1,
                 CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
                 doMalte: false,
@@ -698,7 +701,8 @@ namespace mapf
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
 
-                var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
+                //var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
+                var pred = 5;
                 stopwatch.Stop();
                 Console.WriteLine("Time to predict which solver to use: {0} ms", stopwatch.ElapsedMilliseconds);
                 stopwatch.Start();

@@ -20,8 +20,15 @@ namespace mapf
         private static readonly char EXPORT_DELIMITER = ',';
 
         public static readonly string GRID_NAME_KEY = "Grid Name";
+        public static readonly string SCEN_DIR = "SCEN DIR";
+        public static readonly string MAP_FILE_PATH = "Map File Path";
+        public static readonly string SCEN_FILE = "Scen File";
         public static readonly string INSTANCE_NAME_KEY = "Instance Name";
         public static readonly string SAT_FILE_NAME = "Sat File Name";
+        public static readonly string BCP_FILE_NAME = "BCP File Name";
+        public static readonly string LAZY_CBS_MAP_FILE_NAME = "LazyCBS Map File Name";
+        public static readonly string LAZY_CBS_AGENTS_FILE_NAME = "LazyCBS Agents File Name";
+        public static readonly string N_AGENTS = "N_AGENTS";
         /// <summary>
         /// This contains extra data of this problem instance (used for special problem instances, e.g. subproblems of a bigger problem instance).
         /// </summary>
@@ -187,14 +194,14 @@ namespace mapf
                     this.singleAgentOptimalCosts[agentId] = shortestPathLengths;
                     this.singleAgentOptimalMoves[agentId] = optimalMoves;
                 }
-                for (int otherAgentId = 0; otherAgentId < this.GetNumOfAgents(); otherAgentId++)
-                {
-                    var otherAgentState = this.agents[otherAgentId];
-                    if (this.distanceBetweenAgentGoals[agentId, otherAgentId] != 0) 
-                        continue; // skip already computed
-                    this.distanceBetweenAgentGoals[agentId, otherAgentId] = GetSingleAgentOptimalCost(agentId, otherAgentState.agent.Goal); //Distance from this agent to other agent goal
-                    this.distanceBetweenAgentStartPoints[agentId, otherAgentId] = ShortestPathFromAToB(agentStartState, otherAgentState.lastMove);
-                }
+                //for (int otherAgentId = 0; otherAgentId < this.GetNumOfAgents(); otherAgentId++)
+                //{
+                //    var otherAgentState = this.agents[otherAgentId];
+                //    if (this.distanceBetweenAgentGoals[agentId, otherAgentId] != 0) 
+                //        continue; // skip already computed
+                //    this.distanceBetweenAgentGoals[agentId, otherAgentId] = GetSingleAgentOptimalCost(agentId, otherAgentState.agent.Goal); //Distance from this agent to other agent goal
+                //    this.distanceBetweenAgentStartPoints[agentId, otherAgentId] = ShortestPathFromAToB(agentStartState, otherAgentState.lastMove);
+                //} TODO: Delete that, made a more efficent C-based implemetation for feature extraction
             }
             double endTime = watch.Elapsed.TotalMilliseconds;
             this.shortestPathComputeTime = endTime - startTime;
@@ -489,7 +496,11 @@ namespace mapf
         {
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
             int instanceId = int.Parse(fileNameWithoutExtension.Split('-').Last());
-            string mapfileName = fileNameWithoutExtension.Substring(0, length: fileNameWithoutExtension.LastIndexOf("-even"));  // Passing a length parameter is like specifying a non-inclusive end index
+            string scen_type = "-even";
+            if (fileNameWithoutExtension.LastIndexOf(scen_type) == -1){
+                scen_type = "-random";
+            }
+            string mapfileName = fileNameWithoutExtension.Substring(0, length: fileNameWithoutExtension.LastIndexOf(scen_type));  // Passing a length parameter is like specifying a non-inclusive end index
             Console.WriteLine(mapfileName);
             string mapFilePath = Path.Combine(Path.GetDirectoryName(fileName), @"..", @"..", "maps", mapfileName + ".map");
             Console.WriteLine("map file path {0} {1}", Path.GetDirectoryName(fileName), mapFilePath);
@@ -642,44 +653,47 @@ namespace mapf
                     // Generate the problem instance
                     /////------------- Generate SAT file from scen+map
                     var scen_files_dir = Directory.GetParent(filename_without_extension);
-                    var sat_mpf_fileName = "";
-                    if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    {
-                        sat_mpf_fileName = Path.Combine(scen_files_dir.ToString(), "sat_files", Path.GetFileName(filename_without_extension)
-                       + String.Format("_a_{0}.mpf", i));
-                        if (!File.Exists(sat_mpf_fileName))
-                        {
-                            var process = new Process();
-                            //Console.WriteLine("Converting {0} to SAT file", fileName);
+                    var sat_mpf_fileName = Path.Combine(scen_files_dir.ToString(), "sat_files", Path.GetFileName(filename_without_extension)
+                                           + String.Format("_a_{0}.mpf", i));
+                    //if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    //{
+                    //    sat_mpf_fileName = Path.Combine(scen_files_dir.ToString(), "sat_files", Path.GetFileName(filename_without_extension)
+                    //   + String.Format("_a_{0}.mpf", i));
+                    //    if (!File.Exists(sat_mpf_fileName))
+                    //    {
+                    //        System.Console.WriteLine("Creating sat file at {0}", sat_mpf_fileName);
 
-                            String commandArgs = String.Format("--input-movi-map-file={0}" +
-                                " --input-movi-scen-file={1}" +
-                                " --output-mpf-file={2}" +
-                                " --N-agents={3}", mapFilePath, fileName, sat_mpf_fileName, i);
-                            //Console.WriteLine(commandArgs);
-                            process.StartInfo.FileName = "moviscen_convert_boOX";
-                            process.StartInfo.Arguments = commandArgs;
-                            process.StartInfo.CreateNoWindow = true;
-                            process.StartInfo.UseShellExecute = false;
+                    //        var process = new Process();
+                    //        //Console.WriteLine("Converting {0} to SAT file", fileName);
 
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.OutputDataReceived += (sender, data) =>
-                            {
-                                Console.WriteLine(data.Data);
-                            };
-                            process.StartInfo.RedirectStandardError = true;
-                            process.ErrorDataReceived += (sender, data) =>
-                            {
-                                Console.WriteLine(data.Data);
-                            };
+                    //        String commandArgs = String.Format("--input-movi-map-file={0}" +
+                    //            " --input-movi-scen-file={1}" +
+                    //            " --output-mpf-file={2}" +
+                    //            " --N-agents={3}", mapFilePath, fileName, sat_mpf_fileName, i);
+                    //        //Console.WriteLine(commandArgs);
+                    //        process.StartInfo.FileName = "moviscen_convert_boOX";
+                    //        process.StartInfo.Arguments = commandArgs;
+                    //        process.StartInfo.CreateNoWindow = true;
+                    //        process.StartInfo.UseShellExecute = false;
 
-                            process.Start();
-                            process.BeginOutputReadLine();
-                            process.BeginErrorReadLine();
-                            //bool successInTime = process.WaitForExit(Constants.MAX_TIME);
-                            process.Close();
-                        }
-                    }
+                    //        process.StartInfo.RedirectStandardOutput = true;
+                    //        process.OutputDataReceived += (sender, data) =>
+                    //        {
+                    //            //Console.WriteLine(data.Data);
+                    //        };
+                    //        process.StartInfo.RedirectStandardError = true;
+                    //        process.ErrorDataReceived += (sender, data) =>
+                    //        {
+                    //            //Console.WriteLine(data.Data);
+                    //        };
+
+                    //        process.Start();
+                    //        process.BeginOutputReadLine();
+                    //        process.BeginErrorReadLine();
+                    //        bool successInTime = process.WaitForExit(Constants.MAX_TIME);
+                    //        process.Close();
+                    //    }
+                    //}
                     /////------------- Generate SAT file from scen+map
                     if (instance.agents == null) //Should init the ProblemInstance
                     {
@@ -689,10 +703,20 @@ namespace mapf
                     }
                     else
                     {
-                        instance.AddSingleAgent(stateList.Last()); 
+                        instance.AddSingleAgent(stateList.Last());
                     }
-                    instance.parameters[ProblemInstance.SAT_FILE_NAME] = sat_mpf_fileName;
+                    var lazyCbsAgentsFileName = Path.Combine(scen_files_dir.ToString(), "lazycbs", Path.GetFileName(filename_without_extension) 
+                        + String.Format("_a_{0}.agents", i));
+                    string lazyCbsMapFileName = Path.Combine(Path.GetDirectoryName(fileName), @"..", @"..", "maps", mapfileName + ".map.ecbs");
 
+                    instance.parameters[ProblemInstance.SAT_FILE_NAME] = sat_mpf_fileName;
+                    instance.parameters[ProblemInstance.MAP_FILE_PATH] = mapFilePath;
+                    instance.parameters[ProblemInstance.SCEN_FILE] = fileName;
+
+                    instance.parameters[ProblemInstance.LAZY_CBS_AGENTS_FILE_NAME] = lazyCbsAgentsFileName;
+                    instance.parameters[ProblemInstance.LAZY_CBS_MAP_FILE_NAME] = lazyCbsMapFileName;
+                    instance.parameters[ProblemInstance.SCEN_DIR] = scen_files_dir;
+                    instance.parameters[ProblemInstance.N_AGENTS] = i;
                     instance.instanceId = instanceId;
                     instance.parameters[ProblemInstance.GRID_NAME_KEY] = mapfileName;
                     instance.parameters[ProblemInstance.INSTANCE_NAME_KEY] = fileNameWithoutExtension + ".scen";
@@ -713,8 +737,7 @@ namespace mapf
 
         private void AddSingleAgent(AgentState agentState)
         {
-            //TODO: Compute shortest path and add to list
-            
+           
             Array.Resize(ref this.agents, this.agents.Length + 1);
             Array.Resize(ref this.agentDistancesToGoal, this.agentDistancesToGoal.Length + 1) ;
             ResizeMatrix(ref this.singleAgentOptimalCosts, this.agents.Length);
