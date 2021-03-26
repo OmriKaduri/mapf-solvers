@@ -492,15 +492,43 @@ namespace mapf
             return this.grid[0].Length;
         }
 
+        public static int IndexOfNth(string str, string value, int nth = 0)
+        {
+            if (nth < 0)
+                throw new ArgumentException("Can not find a negative index of substring in string. Must start with 0");
+
+            int offset = str.IndexOf(value);
+            for (int i = 0; i < nth; i++)
+            {
+                if (offset == -1) return -1;
+                offset = str.IndexOf(value, offset + 1);
+            }
+
+            return offset;
+        }
+
         public static ProblemInstance ImportFromScenFile(string fileName)
         {
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
             int instanceId = int.Parse(fileNameWithoutExtension.Split('-').Last());
-            string scen_type = "-even";
-            if (fileNameWithoutExtension.LastIndexOf(scen_type) == -1){
-                scen_type = "-random";
+            //string scen_type = "";
+            string mapfileName = "";
+            int scen_type_seperator_index = 0;
+            if (fileNameWithoutExtension.Split('-')[0].Contains("empty")) //empty map
+            {
+                scen_type_seperator_index = 2;
             }
-            string mapfileName = fileNameWithoutExtension.Substring(0, length: fileNameWithoutExtension.LastIndexOf(scen_type));  // Passing a length parameter is like specifying a non-inclusive end index
+            else if(fileNameWithoutExtension.Split('-')[0].Contains("maze") || fileNameWithoutExtension.Split('-')[0].Contains("random")
+                || fileNameWithoutExtension.Split('-')[0].Contains("room"))
+            {
+                scen_type_seperator_index = 3;
+            }
+            else if (fileNameWithoutExtension.Split('-')[0].Contains("warehouse"))
+            {
+                scen_type_seperator_index = 5;
+            }
+            mapfileName = fileNameWithoutExtension.Substring(0, length: IndexOfNth(fileNameWithoutExtension,"-",scen_type_seperator_index));
+
             Console.WriteLine(mapfileName);
             string mapFilePath = Path.Combine(Path.GetDirectoryName(fileName), @"..", @"..", "maps", mapfileName + ".map");
             Console.WriteLine("map file path {0} {1}", Path.GetDirectoryName(fileName), mapFilePath);
@@ -516,18 +544,18 @@ namespace mapf
                 Debug.Assert(line.StartsWith("type octile"));
                 line = input.ReadLine();
                 lineParts = line.Split(' ');
-                Debug.Assert(lineParts.Length == 2);
-                //Debug.Assert(lineParts[0].Equals("height"));
+                Trace.Assert(lineParts.Length == 2);
+                //Trace.Assert(lineParts[0].Equals("height"));
                 maxY = int.Parse(lineParts[1]);  // The height is the number of rows
                 line = input.ReadLine();
                 lineParts = line.Split(' ');
-                Debug.Assert(lineParts.Length == 2);
-                //Debug.Assert(lineParts[0].Equals("width"));
+                Trace.Assert(lineParts.Length == 2);
+                //Trace.Assert(lineParts[0].Equals("width"));
                 maxX = int.Parse(lineParts[1]);  // The width is the number of columns
                 grid = new bool[maxY][];
 
                 line = input.ReadLine();
-                Debug.Assert(line.StartsWith("map"));
+                Trace.Assert(line.StartsWith("map"));
 
                 char cell;
                 // Read grid
@@ -537,7 +565,7 @@ namespace mapf
                     line = input.ReadLine();
                     for (int j = 0; j < maxX; j++)
                     {
-                        cell = line.ElementAt(j);
+                        cell = line[j];
                         if (cell == '@' || cell == 'O' || cell == 'T' || cell == 'W' /* Water isn't traversable from land */)
                             grid[i][j] = true;
                         else
@@ -640,7 +668,6 @@ namespace mapf
                         agentNum++;
                     }
                     agents_writer.Close();
-                    agents_writer = new StreamWriter(agents_fileName, true);
                     bool resultsFileExisted = File.Exists(Program.RESULTS_FILE_NAME);
                     runner.OpenResultsFile(Program.RESULTS_FILE_NAME);
 
@@ -648,6 +675,7 @@ namespace mapf
                         runner.PrintResultsFileHeader();
 
                     runner.CloseResultsFile();
+                    agents_writer = new StreamWriter(agents_fileName, true);
 
                     Console.WriteLine("Starting scen with {0} agents", i);
                     // Generate the problem instance
@@ -655,45 +683,7 @@ namespace mapf
                     var scen_files_dir = Directory.GetParent(filename_without_extension);
                     var sat_mpf_fileName = Path.Combine(scen_files_dir.ToString(), "sat_files", Path.GetFileName(filename_without_extension)
                                            + String.Format("_a_{0}.mpf", i));
-                    //if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    //{
-                    //    sat_mpf_fileName = Path.Combine(scen_files_dir.ToString(), "sat_files", Path.GetFileName(filename_without_extension)
-                    //   + String.Format("_a_{0}.mpf", i));
-                    //    if (!File.Exists(sat_mpf_fileName))
-                    //    {
-                    //        System.Console.WriteLine("Creating sat file at {0}", sat_mpf_fileName);
 
-                    //        var process = new Process();
-                    //        //Console.WriteLine("Converting {0} to SAT file", fileName);
-
-                    //        String commandArgs = String.Format("--input-movi-map-file={0}" +
-                    //            " --input-movi-scen-file={1}" +
-                    //            " --output-mpf-file={2}" +
-                    //            " --N-agents={3}", mapFilePath, fileName, sat_mpf_fileName, i);
-                    //        //Console.WriteLine(commandArgs);
-                    //        process.StartInfo.FileName = "moviscen_convert_boOX";
-                    //        process.StartInfo.Arguments = commandArgs;
-                    //        process.StartInfo.CreateNoWindow = true;
-                    //        process.StartInfo.UseShellExecute = false;
-
-                    //        process.StartInfo.RedirectStandardOutput = true;
-                    //        process.OutputDataReceived += (sender, data) =>
-                    //        {
-                    //            //Console.WriteLine(data.Data);
-                    //        };
-                    //        process.StartInfo.RedirectStandardError = true;
-                    //        process.ErrorDataReceived += (sender, data) =>
-                    //        {
-                    //            //Console.WriteLine(data.Data);
-                    //        };
-
-                    //        process.Start();
-                    //        process.BeginOutputReadLine();
-                    //        process.BeginErrorReadLine();
-                    //        bool successInTime = process.WaitForExit(Constants.MAX_TIME);
-                    //        process.Close();
-                    //    }
-                    //}
                     /////------------- Generate SAT file from scen+map
                     if (instance.agents == null) //Should init the ProblemInstance
                     {
@@ -1051,13 +1041,6 @@ namespace mapf
         {
             if (IsValidTile(toCheck.x, toCheck.y) == false)
                 return false;
-
-            if (parameters.ContainsKey(IndependenceDetection.ILLEGAL_MOVES_KEY))
-            {
-                var reserved = (HashSet<TimedMove>)parameters[IndependenceDetection.ILLEGAL_MOVES_KEY];
-
-                return (toCheck.IsColliding(reserved) == false);
-            } // FIXME: Should this be here?
 
             return true;
         }

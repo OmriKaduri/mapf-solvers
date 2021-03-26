@@ -1,0 +1,276 @@
+{
+  "version": 3,
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "PicNet.XGBoost/0.2.1": {
+        "type": "package",
+        "compile": {
+          "lib/XGBoost.dll": {}
+        },
+        "runtime": {
+          "lib/XGBoost.dll": {}
+        }
+      },
+      "SharpLearning.Common.Interfaces/0.31.7": {
+        "type": "package",
+        "dependencies": {
+          "SharpLearning.Containers": "0.31.7"
+        },
+        "compile": {
+          "lib/netstandard2.0/SharpLearning.Common.Interfaces.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/SharpLearning.Common.Interfaces.dll": {}
+        }
+      },
+      "SharpLearning.Containers/0.31.7": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/SharpLearning.Containers.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/SharpLearning.Containers.dll": {}
+        }
+      },
+      "SharpLearning.DecisionTrees/0.31.7": {
+        "type": "package",
+        "dependencies": {
+          "SharpLearning.Common.Interfaces": "0.31.7",
+          "SharpLearning.Containers": "0.31.7",
+          "SharpLearning.InputOutput": "0.31.7"
+        },
+        "compile": {
+          "lib/netstandard2.0/SharpLearning.DecisionTrees.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/SharpLearning.DecisionTrees.dll": {}
+        }
+      },
+      "SharpLearning.GradientBoost/0.31.7": {
+        "type": "package",
+        "dependencies": {
+          "SharpLearning.Common.Interfaces": "0.31.7",
+          "SharpLearning.Containers": "0.31.7",
+          "SharpLearning.DecisionTrees": "0.31.7",
+          "SharpLearning.InputOutput": "0.31.7"
+        },
+        "compile": {
+          "lib/netstandard2.0/SharpLearning.GradientBoost.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/SharpLearning.GradientBoost.dll": {}
+        }
+      },
+      "SharpLearning.InputOutput/0.31.7": {
+        "type": "package",
+        "dependencies": {
+          "SharpLearning.Containers": "0.31.7"
+        },
+        "compile": {
+          "lib/netstandard2.0/SharpLearning.InputOutput.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/SharpLearning.InputOutput.dll": {}
+        }
+      },
+      "SharpLearning.XGBoost/0.31.7": {
+        "type": "package",
+        "dependencies": {
+          "PicNet.XGBoost": "0.2.1",
+          "SharpLearning.Common.Interfaces": "0.31.7",
+          "SharpLearning.Containers": "0.31.7",
+          "SharpLearning.GradientBoost": "0.31.7",
+          "SharpLearning.InputOutput": "0.31.7"
+        },
+        "compile": {
+          "lib/netstandard2.0/SharpLearning.XGBoost.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/SharpLearning.XGBoost.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "PicNet.XGBoost/0.2.1": {
+      "sha512": "Y4UJYCZmZymZwhyCDyg7GUv3sK4y72nXbRMlg6opsqYjKpN31WdVfpXlERZhCiGfFIDGIliSNunPJE8KqXSxTg==",
+      "type": "package",
+      "path": "picnet.xgboost/0.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/XGBoost.dll",
+        "picnet.xgboost.0.2.1.nupkg.sha512",
+        "picnet.xgboost.nuspec"
+      ]
+    },
+    "SharpLearning.Common.Interfaces/0.31.7": {
+      "sha512": "QJg28JQdWzHygfgEViCsEDEVmoTHhQoD9gjhHwZJgL6a8RI7cnYyszR+daKPotP9RCil8/03EZkBEYA0vFCTQw==",
+      "type": "package",
+      "path": "sharplearning.common.interfaces/0.31.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net461/SharpLearning.Common.Interfaces.dll",
+        "lib/net461/SharpLearning.Common.Interfaces.xml",
+        "lib/netstandard2.0/SharpLearning.Common.Interfaces.dll",
+        "lib/netstandard2.0/SharpLearning.Common.Interfaces.xml",
+        "sharplearning.common.interfaces.0.31.7.nupkg.sha512",
+        "sharplearning.common.interfaces.nuspec"
+      ]
+    },
+    "SharpLearning.Containers/0.31.7": {
+      "sha512": "B1U+GQ1dTl8diT1m1Aww0uc9tSRlUezWNmYNPtqBLfoAoAPHYXgiEvsadlxtppN6YqTEbivAEyMMTFVM7Ech+w==",
+      "type": "package",
+      "path": "sharplearning.containers/0.31.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net461/SharpLearning.Containers.dll",
+        "lib/net461/SharpLearning.Containers.xml",
+        "lib/netstandard2.0/SharpLearning.Containers.dll",
+        "lib/netstandard2.0/SharpLearning.Containers.xml",
+        "sharplearning.containers.0.31.7.nupkg.sha512",
+        "sharplearning.containers.nuspec"
+      ]
+    },
+    "SharpLearning.DecisionTrees/0.31.7": {
+      "sha512": "EOkz3KkVPs6oclPQZ0KqswVBwjhksD7ZTbMb/CoRj6ED8aQd91tw49MU0ulf1yiBrNS2xltMc+alNFsX3rgyMg==",
+      "type": "package",
+      "path": "sharplearning.decisiontrees/0.31.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net461/SharpLearning.DecisionTrees.dll",
+        "lib/net461/SharpLearning.DecisionTrees.xml",
+        "lib/netstandard2.0/SharpLearning.DecisionTrees.dll",
+        "lib/netstandard2.0/SharpLearning.DecisionTrees.xml",
+        "sharplearning.decisiontrees.0.31.7.nupkg.sha512",
+        "sharplearning.decisiontrees.nuspec"
+      ]
+    },
+    "SharpLearning.GradientBoost/0.31.7": {
+      "sha512": "56oPU4GOOIjeliUlRp9IQWudvrkAJAG+tl5aHpORgqmaBsjsMbD6BD0whMcrhjXRZAa7uVc/JFxBvyVYYAUskw==",
+      "type": "package",
+      "path": "sharplearning.gradientboost/0.31.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net461/SharpLearning.GradientBoost.dll",
+        "lib/net461/SharpLearning.GradientBoost.xml",
+        "lib/netstandard2.0/SharpLearning.GradientBoost.dll",
+        "lib/netstandard2.0/SharpLearning.GradientBoost.xml",
+        "sharplearning.gradientboost.0.31.7.nupkg.sha512",
+        "sharplearning.gradientboost.nuspec"
+      ]
+    },
+    "SharpLearning.InputOutput/0.31.7": {
+      "sha512": "8CeAKghpxZtnrKL2iDoa28mp+Zq/1El14E/wqZOMdCrxJ5xXyoGvu44soRURfonStCYNvycrTaQm/wvnPi4HGg==",
+      "type": "package",
+      "path": "sharplearning.inputoutput/0.31.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net461/SharpLearning.InputOutput.dll",
+        "lib/net461/SharpLearning.InputOutput.xml",
+        "lib/netstandard2.0/SharpLearning.InputOutput.dll",
+        "lib/netstandard2.0/SharpLearning.InputOutput.xml",
+        "sharplearning.inputoutput.0.31.7.nupkg.sha512",
+        "sharplearning.inputoutput.nuspec"
+      ]
+    },
+    "SharpLearning.XGBoost/0.31.7": {
+      "sha512": "pjNeid2DNAMqYsZfPk7/4qkBmnr+SMLuJMi0C9ds6TlpCD/cyZghrVDM01c/fCv8uUHoE4wjcmet/XdXXKrimA==",
+      "type": "package",
+      "path": "sharplearning.xgboost/0.31.7",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net461/SharpLearning.XGBoost.dll",
+        "lib/net461/SharpLearning.XGBoost.xml",
+        "lib/netstandard2.0/SharpLearning.XGBoost.dll",
+        "lib/netstandard2.0/SharpLearning.XGBoost.xml",
+        "sharplearning.xgboost.0.31.7.nupkg.sha512",
+        "sharplearning.xgboost.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    ".NETCoreApp,Version=v3.1": [
+      "SharpLearning.XGBoost >= 0.31.7"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\omri\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\omri\\Projects\\study\\2019semB\\agentsPlanning\\new-mapf\\mapfWin.csproj",
+      "projectName": "mapfWin",
+      "projectPath": "C:\\Users\\omri\\Projects\\study\\2019semB\\agentsPlanning\\new-mapf\\mapfWin.csproj",
+      "packagesPath": "C:\\Users\\omri\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\omri\\Projects\\study\\2019semB\\agentsPlanning\\new-mapf\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\omri\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "netcoreapp3.1"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "netcoreapp3.1": {
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "netcoreapp3.1": {
+        "dependencies": {
+          "SharpLearning.XGBoost": {
+            "target": "Package",
+            "version": "[0.31.7, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files (x86)\\dotnet\\sdk\\3.1.101\\RuntimeIdentifierGraph.json"
+      }
+    }
+  },
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'PicNet.XGBoost 0.2.1' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8' instead of the project target framework '.NETCoreApp,Version=v3.1'. This package may not be fully compatible with your project.",
+      "libraryId": "PicNet.XGBoost",
+      "targetGraphs": [
+        ".NETCoreApp,Version=v3.1"
+      ]
+    }
+  ]
+}

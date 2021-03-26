@@ -4,15 +4,13 @@ using System.IO;
 using System.Diagnostics;
 using System.Linq;
 
-using ExtensionMethods;
-
 namespace mapf
 {
     /// <summary>
     /// Merges agents if they conflict more times than the given threshold in the CT nodes
     /// from the root to the current CT nodes only.
     /// </summary>
-    public class CBS : ICbsSolver, IHeuristicSolver<CbsNode>
+    public class CBS : ICbsSolver, IHeuristicSolver<CbsNode>, IIndependenceDetectionSolver
     {
         /// <summary>
         /// The key of the constraints list used for each CBS node
@@ -118,7 +116,8 @@ namespace mapf
         /// regardless of whether a goal node was found. Note maxSolutionCost stops the search when
         /// the same F value is exhausted from the open list later.
         /// </summary>
-        public int targetF {
+        public int targetF
+        {
             get
             {
                 return this.m_targetF;
@@ -214,7 +213,7 @@ namespace mapf
             this.heuristic = heuristic;
             if (Constants.costFunction != Constants.CostFunction.SUM_OF_COSTS)
             {
-                Debug.Assert(conflictChoice != ConflictChoice.CARDINAL_MDD &&
+                Trace.Assert(conflictChoice != ConflictChoice.CARDINAL_MDD &&
                              conflictChoice != ConflictChoice.CARDINAL_LOOKAHEAD,  // TODO: Might be OK. Need to look at it.
                     "Under makespan, increasing the cost for a single agent might not increase the cost for the solution." +
                     "Before this strategy is enabled we need to add a consideration of whether the agent whose cost will " +
@@ -228,9 +227,46 @@ namespace mapf
             this.useOldCost = useOldCost;
             this.useCAT = useCAT;
         }
-        
+
         /// <summary>
-        /// 
+        /// Implements IIndependenceDetection.Setup for new groups
+        /// </summary>
+        /// <param name="problemInstance"></param>
+        /// <param name="runner"></param>
+        /// <param name="CAT"></param>
+        /// <param name="parentGroup1Cost"></param>
+        /// <param name="parentGroup2Cost"></param>
+        /// <param name="parentGroup1Size"></param>
+        public void Setup(ProblemInstance problemInstance, Run runner, ConflictAvoidanceTable CAT,
+                          int parentGroup1Cost, int parentGroup2Cost, int parentGroup1Size)
+        {
+            this.Setup(problemInstance, -1, runner, CAT, null, null, parentGroup1Cost + parentGroup2Cost);
+        }
+
+        /// <summary>
+        /// Implements IIndependenceDetection.Setup for replanning groups to resolve a conflict
+        /// </summary>
+        /// <param name="problemInstance"></param>
+        /// <param name="runner"></param>
+        /// <param name="CAT"></param>
+        /// <param name="targetCost">/// </param>
+        /// <param name="illegalMoves"></param>
+        public void Setup(ProblemInstance problemInstance, Run runner, ConflictAvoidanceTable CAT,
+                          int targetCost, ISet<TimedMove> illegalMoves)
+        {
+            var constraints = new HashSet<CbsConstraint>(illegalMoves.Count * problemInstance.agents.Length);
+            foreach (var illegalMove in illegalMoves)
+            {
+                foreach (var agentState in problemInstance.agents)
+                {
+                    constraints.Add(new CbsConstraint(agentState.agent.agentNum, illegalMove));
+                }
+            }
+            this.Setup(problemInstance, illegalMoves.Max(move => move.time), runner, CAT, constraints, null, targetCost, targetCost);
+        }
+
+        /// <summary>
+        /// Implements ICbsSolver.Setup.
         /// </summary>
         /// <param name="problemInstance"></param>
         /// <param name="minSolutionTimeStep"></param>
@@ -239,6 +275,8 @@ namespace mapf
         /// <param name="maxSolutionCost"></param>
         /// <param name="mdd">Currently ignored. FIXME: Need to convert to array of MDDs to use.</param>
         public virtual void Setup(ProblemInstance problemInstance, int minSolutionTimeStep, Run runner,
+            ConflictAvoidanceTable CAT, ISet<CbsConstraint> constraints,
+            ISet<CbsConstraint> positiveConstraints,
             int minSolutionCost = -1, int maxSolutionCost = int.MaxValue, MDD mdd = null)
         {
             this.instance = problemInstance;
@@ -256,8 +294,8 @@ namespace mapf
             this.solution = null;
 
             // Independence Detection parameters
-            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAXIMUM_COST_KEY))
-                this.maxSolutionCost = (int)problemInstance.parameters[IndependenceDetection.MAXIMUM_COST_KEY];
+            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAX_COST_KEY))
+                this.maxSolutionCost = (int)problemInstance.parameters[IndependenceDetection.MAX_COST_KEY];
             else
                 this.maxSolutionCost = int.MaxValue;
 
@@ -266,7 +304,7 @@ namespace mapf
             this.minSolutionCost = minSolutionCost;
             this.maxSolutionCost = Math.Max(this.maxSolutionCost, maxSolutionCost);
             if (this.replanSameCostWithMdd)
-                Debug.Assert(this.mergeThreshold == -1, "Using MDDs to replan same-cost paths is currently only supported for single agents");
+                Trace.Assert(this.mergeThreshold == -1, "Using MDDs to replan same-cost paths is currently only supported for single agents");
 
             if (this.cacheMdds)
             {
@@ -279,7 +317,19 @@ namespace mapf
                 }
             }
 
-            this.topMost = this.SetGlobals();
+            if (constraints == null) // Top-most CBS solver
+            {
+                if (this.useCAT)
+                    CAT = new CAT_U();
+                constraints = new HashSet_U<CbsConstraint>();
+                if (this.doMalte)
+                    positiveConstraints = new HashSet_U<CbsConstraint>();
+                this.topMost = true;
+            }
+            else
+                this.topMost = false;
+
+            this.SetGlobals();
 
             CbsNode root = new CbsNode(instance.agents.Length, this.solver, this.singleAgentSolver, this); // Problem instance and various strategy data is all passed under 'this'.
             // Solve the root node
@@ -300,9 +350,14 @@ namespace mapf
             }
         }
 
+        /// <summary>
+        /// Implements ISolver.Setup 
+        /// </summary>
+        /// <param name="problemInstance"></param>
+        /// <param name="runner"></param>
         public virtual void Setup(ProblemInstance problemInstance, Run runner)
         {
-            this.Setup(problemInstance, 0, runner);
+            this.Setup(problemInstance, 0, runner, null, null, null);
         }
 
         public IHeuristicCalculator<CbsNode> GetHeuristic()
@@ -338,7 +393,7 @@ namespace mapf
             // Statistics are reset on Setup.
         }
 
-        public virtual string GetName() 
+        public virtual string GetName()
         {
             string lowLevelSolvers;
             if (mergeThreshold == -1 || Object.ReferenceEquals(this.singleAgentSolver, this.solver))
@@ -699,23 +754,11 @@ namespace mapf
         /// <summary>
         /// 
         /// </summary>
-        /// <returns>Whether this is the top-most CBS</returns>
-        protected bool SetGlobals()
+        /// <returns></returns>
+        protected void SetGlobals()
         {
             this.equivalenceWasOn = AgentState.EquivalenceOverDifferentTimes == true;
             AgentState.EquivalenceOverDifferentTimes = false;
-
-            if (this.instance.parameters.ContainsKey(CBS.CONSTRAINTS) == false) // Top-most CBS solver
-            {
-                if (this.useCAT)
-                    this.instance.parameters[CBS.CAT] = new Dictionary_U<TimedMove, int>(); // Dictionary_U values are actually lists of ints.
-                this.instance.parameters[CBS.CONSTRAINTS] = new HashSet_U<CbsConstraint>();
-                if (this.doMalte && this.instance.parameters.ContainsKey(CBS.MUST_CONSTRAINTS) == false)
-                    this.instance.parameters[CBS.MUST_CONSTRAINTS] = new HashSet_U<CbsConstraint>();
-                return true;
-            }
-            else
-                return false;
         }
 
         protected void CleanGlobals()
@@ -800,7 +843,7 @@ namespace mapf
                 // Check if node is the goal
                 if (currentNode.GoalTest())
                 {
-                    Debug.Assert(currentNode.g >= maxExpandedNodeF,
+                    Trace.Assert(currentNode.g >= maxExpandedNodeF,
                                  $"CBS goal node found with lower cost than the max cost node ever expanded: {currentNode.g} < {maxExpandedNodeF}");
                     // This is subtle, but MA-CBS may expand nodes in a non non-decreasing order:
                     // If a non-optimal constraint is expanded upon and we decide to merge the agents,
@@ -835,7 +878,7 @@ namespace mapf
 
                 // Check conditions that stop the search before a goal is found
                 if (currentNode.f >= this.targetF || // Node is good enough
-                    this.singleAgentSolver.GetAccumulatedGenerated() + this.solver.GetAccumulatedGenerated() > 
+                    this.singleAgentSolver.GetAccumulatedGenerated() + this.solver.GetAccumulatedGenerated() >
                         this.lowLevelGeneratedCap || // Stop because this is taking too long.
                                                      // We're looking at _generated_ low level nodes since that's an indication to the amount of work done,
                                                      // while expanded nodes is an indication of the amount of good work done.
@@ -923,7 +966,7 @@ namespace mapf
                     child = new CbsNode(this.instance.agents.Length, this.solver,
                                         this.singleAgentSolver, this, node.agentsGroupAssignment);  // This will be the new root node
                     child.MergeGroups(node.agentsGroupAssignment[conflict.agentAIndex],
-                        node.agentsGroupAssignment[conflict.agentBIndex], fixCounts: false);
+                                      node.agentsGroupAssignment[conflict.agentBIndex], fixCounts: false);
                     this.maxSizeGroup = Math.Max(this.maxSizeGroup, child.GetGroupSize(conflict.agentAIndex));
                     bool solved = child.Solve(this.minSolutionTimeStep);
                     if (solved == false)
@@ -959,11 +1002,11 @@ namespace mapf
                     leftSameCost = child.g == node.g;
                     if (leftSameCost)
                     {
-                        Debug.Assert(node.conflict.willCostIncreaseForAgentA != CbsConflict.WillCostIncrease.YES);
+                        Trace.Assert(node.conflict.willCostIncreaseForAgentA != CbsConflict.WillCostIncrease.YES);
                     }
                     else
                     {
-                        Debug.Assert(node.conflict.willCostIncreaseForAgentA != CbsConflict.WillCostIncrease.NO);
+                        Trace.Assert(node.conflict.willCostIncreaseForAgentA != CbsConflict.WillCostIncrease.NO);
                     }
                 }
             }
@@ -992,11 +1035,11 @@ namespace mapf
                     rightSameCost = child.g == node.g;
                     if (rightSameCost)
                     {
-                        Debug.Assert(node.conflict.willCostIncreaseForAgentB != CbsConflict.WillCostIncrease.YES);
+                        Trace.Assert(node.conflict.willCostIncreaseForAgentB != CbsConflict.WillCostIncrease.YES);
                     }
                     else
                     {
-                        Debug.Assert(node.conflict.willCostIncreaseForAgentB != CbsConflict.WillCostIncrease.NO);
+                        Trace.Assert(node.conflict.willCostIncreaseForAgentB != CbsConflict.WillCostIncrease.NO);
                     }
                 }
             }
@@ -1020,7 +1063,7 @@ namespace mapf
 
             return (adopted: false, children, reinsertParent);
         }
-        
+
         private void ExpandIgnoringCardinalsButSupportingBP2(CbsNode node)
         {
             int parentCost = node.g;
@@ -1028,7 +1071,7 @@ namespace mapf
             IList<CbsNode> children = new List<CbsNode>(2);
             bool reinsertParent = false;
             bool adopted = false;
-             
+
             int origCardinalConflictSplits = this.cardinalConflictSplits;
             int origSemiCardinalConflictSplits = this.semiCardinalConflictSplits;
             int origNonCardinalConflictSplits = this.nonCardinalConflictSplits;
@@ -1311,7 +1354,7 @@ namespace mapf
                 // Bequeath remainder of h from parent
                 int remainingParentH = parentH - (child.g - parentCost);
                 if (child.h < remainingParentH)
-                    child.h = (ushort) remainingParentH;
+                    child.h = (ushort)remainingParentH;
 
                 if (this.bypassStrategy == BypassStrategy.BEST_FIT_LOOKAHEAD)
                 {
@@ -1352,8 +1395,8 @@ namespace mapf
             int origSemiCardinalConflictSplits = this.semiCardinalConflictSplits;
             int origNonCardinalConflictSplits = this.nonCardinalConflictSplits;
 
-            Debug.Assert(this.bypassStrategy == BypassStrategy.NONE || this.lookaheadMaxExpansions == 1, "Only BP1 is supported with cardinal conflict choice");  // Assumed in order to simplify code
-            Debug.Assert(this.bypassStrategy != BypassStrategy.BEST_FIT_LOOKAHEAD, "Only first-fit adoption is supported with cardinal conflict choice"); // Assumed in order to simplify code
+            Trace.Assert(this.bypassStrategy == BypassStrategy.NONE || this.lookaheadMaxExpansions == 1, "Only BP1 is supported with cardinal conflict choice");  // Assumed in order to simplify code
+            Trace.Assert(this.bypassStrategy != BypassStrategy.BEST_FIT_LOOKAHEAD, "Only first-fit adoption is supported with cardinal conflict choice"); // Assumed in order to simplify code
 
             bool adoptionPerformedBefore = false;
 
@@ -1384,7 +1427,7 @@ namespace mapf
                         return;
                     }
 
-                    Debug.Assert(node.conflict != null, "A conflict should have been found");
+                    Trace.Assert(node.conflict != null, "A conflict should have been found");
                     // We might re-encounter conflicts we've already found aren't cardinal, but
                     // since at least one path changed, the number of conflicts after adopting a child
                     // might become smaller after adopting a child's solution this time
@@ -1509,7 +1552,7 @@ namespace mapf
             }
             else // We try to split according to cardinal conflicts
             {
-                Debug.Assert(bypassStrategy != BypassStrategy.BEST_FIT_LOOKAHEAD, "For simplicity, BP2 is not supported when choosing cardinal conflicts");
+                Trace.Assert(bypassStrategy != BypassStrategy.BEST_FIT_LOOKAHEAD, "For simplicity, BP2 is not supported when choosing cardinal conflicts");
                 this.IcbsExpand(node);
             }
         }
@@ -1526,7 +1569,7 @@ namespace mapf
         {
             CbsConflict conflict = node.GetConflict();
             int closedListHitChildCost = -1;
-            
+
             CbsNode child = new CbsNode(node, node.agentsGroupAssignment[conflict.agentAIndex], node.agentsGroupAssignment[conflict.agentBIndex]);
             if (closedList.ContainsKey(child) == false) // We may have already merged these agents in another node
             {
@@ -1581,10 +1624,10 @@ namespace mapf
         protected (CbsNode child, int closedListHitChildCost) ConstraintExpand(CbsNode node, bool doLeftChild)
         {
             CbsConflict conflict = node.GetConflict();
-            int conflictingAgentIndex = doLeftChild? conflict.agentAIndex : conflict.agentBIndex;
+            int conflictingAgentIndex = doLeftChild ? conflict.agentAIndex : conflict.agentBIndex;
             CbsNode.ExpansionState expansionsState = doLeftChild ? node.agentAExpansion : node.agentBExpansion;
             CbsNode.ExpansionState otherChildExpansionsState = doLeftChild ? node.agentBExpansion : node.agentAExpansion;
-            string agentSide = doLeftChild? "left" : "right";
+            string agentSide = doLeftChild ? "left" : "right";
             int planSize = node.allSingleAgentPlans[conflictingAgentIndex].GetSize();  // Used to check if the conflict occurs while the agent is at its goal
             int groupSize = node.GetGroupSize(conflictingAgentIndex);
             CbsConflict.WillCostIncrease willCostIncrease = doLeftChild ? node.conflict.willCostIncreaseForAgentA : node.conflict.willCostIncreaseForAgentB;
@@ -1599,7 +1642,7 @@ namespace mapf
                                                                                  // An agent with a plan of the same length? (but goals don't collide)
                 ((Constants.sumOfCostsVariant == Constants.SumOfCostsVariant.ORIG &&
                 expansionsState == CbsNode.ExpansionState.NOT_EXPANDED && conflict.isVertexConflict == true &&  // An edge conflict at the goal isn't guaranteed
-                                                                                                      // to increase the cost - the agent might be able to reach the goal from another direction
+                                                                                                                // to increase the cost - the agent might be able to reach the goal from another direction
                  conflict.timeStep >= node.allSingleAgentCosts[conflictingAgentIndex] && // Can't just check whether the node is at its goal - 
                                                                                          // the plan may involve it passing through its goal and returning to it later because of preexisting constraints.
                                                                                          // This assumes unit move costs
@@ -1616,26 +1659,26 @@ namespace mapf
                 groupSize == 1))) // Otherwise an agent in the group can be forced to take a longer
                                   // route without increasing the group's cost because
                                   // another agent would be able to take a shorter route.
-            // Conflict happens when or after the agent reaches its goal, and the agent is in a single-agent group.
-            // With multi-agent groups, banning the goal doesn't guarantee a higher cost solution,
-            // since if an agent is forced to take a longer route it may enable another agent in the group
-            // to take a shorter route, getting an alternative solution of the same cost
-            // The child would cost a lot because:
-            // A) All WAIT moves in the goal before leaving it now add to the g (if we're in the original problem variant).
-            // B) We force the low level to compute a path longer than the optimal,
-            //    and with a bad suprise towards the end in the form of a constraint,
-            //    so the low-level's SIC heuristic performs poorly.
-            // C) We're banning the GOAL from all directions (since this is a vertex conflict),
-            //    so any alternative plan will at least cost 1 more.
-            //    We're ignoring edge conflicts because they can only happen at the goal when reaching it,
-            //    and aren't guaranteed to increase the cost because the goal can still be possibly reached from another edge.
+                                  // Conflict happens when or after the agent reaches its goal, and the agent is in a single-agent group.
+                                  // With multi-agent groups, banning the goal doesn't guarantee a higher cost solution,
+                                  // since if an agent is forced to take a longer route it may enable another agent in the group
+                                  // to take a shorter route, getting an alternative solution of the same cost
+                                  // The child would cost a lot because:
+                                  // A) All WAIT moves in the goal before leaving it now add to the g (if we're in the original problem variant).
+                                  // B) We force the low level to compute a path longer than the optimal,
+                                  //    and with a bad suprise towards the end in the form of a constraint,
+                                  //    so the low-level's SIC heuristic performs poorly.
+                                  // C) We're banning the GOAL from all directions (since this is a vertex conflict),
+                                  //    so any alternative plan will at least cost 1 more.
+                                  //    We're ignoring edge conflicts because they can only happen at the goal when reaching it,
+                                  //    and aren't guaranteed to increase the cost because the goal can still be possibly reached from another edge.
             {
                 // Defer expansion. The conflict happens while the agent is at its goal - the cost will
                 // surely increase.
                 if (otherChildExpansionsState == CbsNode.ExpansionState.DEFERRED)
-                        throw new Exception("Unexpected: Expansion of both children deffered, " +
-                            "but this is a vertex conflict so that means the targets for the " +
-                            "two agents are equal, which is illegal");
+                    throw new Exception("Unexpected: Expansion of both children deffered, " +
+                        "but this is a vertex conflict so that means the targets for the " +
+                        "two agents are equal, which is illegal");
 
                 Debug.WriteLine($"Skipping {agentSide} child for now");
                 if (doLeftChild)
@@ -1653,9 +1696,9 @@ namespace mapf
                 else if (Constants.sumOfCostsVariant == Constants.SumOfCostsVariant.WAITING_AT_GOAL_ALWAYS_FREE)
                 {
                     if (conflict.timeStep > planSize - 1) // Agent will need to step out and step in to the goal, at least
-                        node.h = Math.Max(node.h, (ushort) 1);
+                        node.h = Math.Max(node.h, (ushort)1);
                     else // Conflict is just when agent enters the goal, it'll have to at least wait one timestep.
-                        node.h = Math.Max(node.h, (ushort) 1);
+                        node.h = Math.Max(node.h, (ushort)1);
                     // Technically, we've already made sure above we're going to increase the node's h,
                     // This is just to make the line look correct without reading the complex if statement above.
                 }
@@ -1722,7 +1765,7 @@ namespace mapf
                         child.allSingleAgentPlans[conflictingAgentIndex].DebugPrint();
                         Debug.WriteLine("Parent plan: (cost {0})", node.allSingleAgentCosts[conflictingAgentIndex]);
                         node.allSingleAgentPlans[conflictingAgentIndex].DebugPrint();
-                        Debug.Assert(false, $"Single agent node with lower cost than parent! {child.g} < {node.g}");
+                        Trace.Assert(false, $"Single agent node with lower cost than parent! {child.g} < {node.g}");
                     }
 
                     return (child, closedListHitChildCost: -1);
@@ -1779,9 +1822,9 @@ namespace mapf
         }
 
         public int GetSolutionDepth() { return this.solutionDepth; }
-        
+
         public long GetMemoryUsed() { return Process.GetCurrentProcess().VirtualMemorySize64; }
-        
+
         public SinglePlan[] GetSinglePlans()
         {
             return goalNode.allSingleAgentPlans;
@@ -1828,6 +1871,7 @@ namespace mapf
         }
 
         /// <summary>
+        /// Implement ISolver.Setup.
         /// Assumes agent nums start from 0 and are consecutive.
         /// </summary>
         /// <param name="problemInstance"></param>

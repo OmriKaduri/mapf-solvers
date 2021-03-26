@@ -8,7 +8,7 @@ namespace mapf
     /// <summary>
     /// Runs a bounded CBS to get an lower estimate of the cost from a given A* node to the goal.
     /// TODO: This class can actually be generalized to SolverHeuristic and be used as a brute-force estimator.
-    ///       The only CBS things in it are the targetCost, the Debug.Assert that the root costs exactly like SIC's
+    ///       The only CBS things in it are the targetCost, the Trace.Assert that the root costs exactly like SIC's
     ///       estimate, and the statistics.
     /// </summary>
     class CbsHeuristicForAStar : IHeuristicCalculator<WorldState>
@@ -65,9 +65,9 @@ namespace mapf
         {
             int sicEstimate;
             if (Constants.costFunction == Constants.CostFunction.SUM_OF_COSTS)
-                sicEstimate = (int) SumIndividualCosts.h(s, this.instance);
+                sicEstimate = (int)SumIndividualCosts.h(s, this.instance);
             else if (Constants.costFunction == Constants.CostFunction.MAKESPAN || Constants.costFunction == Constants.CostFunction.MAKESPAN_THEN_SUM_OF_COSTS)
-                sicEstimate = (int) MaxIndividualCosts.h(s, this.instance);
+                sicEstimate = (int)MaxIndividualCosts.h(s, this.instance);
             else
                 throw new Exception($"Unsupported cost function {Constants.costFunction}");
             if (sicEstimate == 0)  // Only the goal has an estimate of zero
@@ -91,8 +91,8 @@ namespace mapf
         /// <param name="milliCap">The process total millisecond count to stop at</param>
         /// <param name="resume">Whether to resume the last search instead of solving the given node. Assumes the last search was from the same node as the given node.</param>
         /// <returns></returns>
-        protected uint h(WorldState s, int targetCost, int sicEstimate=-1, int lowLevelGeneratedCap=-1,
-                         int milliCap=int.MaxValue, bool resume=false)
+        protected uint h(WorldState s, int targetCost, int sicEstimate = -1, int lowLevelGeneratedCap = -1,
+                         int milliCap = int.MaxValue, bool resume = false)
         {
             double start = this.runner.ElapsedMilliseconds();
 
@@ -105,21 +105,21 @@ namespace mapf
                                Math.Max(s.makespan,  // This forces must-constraints to be upheld when dealing with A*+OD nodes,
                                                      // at the cost of forcing every agent to move when a goal could be found earlier with all must constraints upheld.
                                         s.minGoalTimeStep), // No point in finding shallower goal nodes
-                               this.runner);
-                
+                               this.runner, null, null, null);
+
                 if (this.cbs.openList.Count > 0 && this.cbs.topMost)
                 {
                     if (sicEstimate == -1)
                     {
                         if (Constants.costFunction == Constants.CostFunction.SUM_OF_COSTS)
-                            sicEstimate = (int) SumIndividualCosts.h(s, this.instance);
+                            sicEstimate = (int)SumIndividualCosts.h(s, this.instance);
                         else if (Constants.costFunction == Constants.CostFunction.MAKESPAN || Constants.costFunction == Constants.CostFunction.MAKESPAN_THEN_SUM_OF_COSTS)
-                            sicEstimate = (int) MaxIndividualCosts.h(s, this.instance);
+                            sicEstimate = (int)MaxIndividualCosts.h(s, this.instance);
                         else
                             throw new Exception($"Unsupported cost function {Constants.costFunction}");
                     }
 
-                    Debug.Assert(((CbsNode)this.cbs.openList.Peek()).g - s.g == (int)sicEstimate,
+                    Trace.Assert(((CbsNode)this.cbs.openList.Peek()).g - s.g == (int)sicEstimate,
                                     "Total cost of CBS root not same as SIC + g");
                     // Notice we're subtracting s.g, not sAsProblemInstance.g.
                     // Must constraints we put may have forced some moves,
@@ -132,7 +132,7 @@ namespace mapf
             if (lowLevelGeneratedCap == -1)
             {
                 // Rough estimate of the branching factor:
-                lowLevelGeneratedCap = (int) Math.Pow(Constants.NUM_ALLOWED_DIRECTIONS, this.instance.agents.Length);
+                lowLevelGeneratedCap = (int)Math.Pow(Constants.NUM_ALLOWED_DIRECTIONS, this.instance.agents.Length);
             }
 
             // Calc the h:
@@ -172,10 +172,10 @@ namespace mapf
                     throw new Exception($"Unsupported cost function {Constants.costFunction}");
             }
 
-            Debug.Assert(this.cbs.solutionCost >= s.g,
+            Trace.Assert(this.cbs.solutionCost >= s.g,
                          $"CBS total cost {this.cbs.solutionCost} is smaller than starting problem's initial cost {s.g}."); // = is allowed since even though this isn't a goal node (otherwise this function won't be called),
-                                                                                                                         // a non-goal node can have h==0 if a minimum depth is specified, and all agents have reached their
-                                                                                                                         // goal in this node, but the depth isn't large enough.
+                                                                                                                            // a non-goal node can have h==0 if a minimum depth is specified, and all agents have reached their
+                                                                                                                            // goal in this node, but the depth isn't large enough.
 
             uint cbsEstimate = (uint)(this.cbs.solutionCost - s.g);
             // Discounting the moves the agents did before we started solving
@@ -185,7 +185,7 @@ namespace mapf
                                                                // Can be negative if the base heuristic was improved by:
                                                                // - Partial expansion
                                                                // - BPMX
-            
+
             if (validate)
             {
                 // Brute-force validation of admissibility of estimate:
@@ -196,13 +196,13 @@ namespace mapf
                     heuristic = new MaxIndividualCosts();
                 else
                     throw new Exception($"Unsupported cost function {Constants.costFunction}");
-                
+
                 heuristic.Init(this.instance, this.agentsToConsider);
                 var epeastarsic = new EPEA_Star(heuristic);
                 epeastarsic.Setup(sAsProblemInstance, s.makespan, runner);
                 bool epeastarsicSolved = epeastarsic.Solve();
                 if (epeastarsicSolved)
-                    Debug.Assert(epeastarsic.totalCost - s.g >= this.cbs.solutionCost - s.g, "Inadmissible!!");
+                    Trace.Assert(epeastarsic.totalCost - s.g >= this.cbs.solutionCost - s.g, "Inadmissible!!");
             }
 
             return cbsEstimate;
@@ -367,7 +367,7 @@ namespace mapf
             output.Write(accAverageRunTime + Run.RESULTS_DELIMITER);
             output.Write(accAverageImprovement + Run.RESULTS_DELIMITER);
             output.Write(this.accNodesSolved + Run.RESULTS_DELIMITER);
-            output.Write(this.accNCalls + Run.RESULTS_DELIMITER);            
+            output.Write(this.accNCalls + Run.RESULTS_DELIMITER);
         }
 
         public string GetName()
@@ -379,7 +379,7 @@ namespace mapf
     class DyanamicLazyCbsHeuristicForAStar : CbsHeuristicForAStar, IBoundedLazyHeuristic<WorldState>
     {
         public DyanamicLazyCbsHeuristicForAStar(CBS cbs, Run runner, bool reportSolution = false, bool validate = false)
-            : base(cbs, runner, reportSolution, -1, validate) {}
+            : base(cbs, runner, reportSolution, -1, validate) { }
 
         /// <summary>
         /// Assumes g of node was already calculated.
@@ -391,8 +391,8 @@ namespace mapf
         public uint h(WorldState s, int targetH, float effectiveBranchingFactor)
         {
             // No need to check if SIC is zero because this heuristic is run after SIC was already computed, not instead of it.
-            int lowLevelGeneratedCap = (int) Math.Round(effectiveBranchingFactor * this.instance.agents.Length); // Cap of B_of_AStar * K,
-                                                                                                                 // because CBS low level nodes are of one agent only so they're about k times cheaper to work with
+            int lowLevelGeneratedCap = (int)Math.Round(effectiveBranchingFactor * this.instance.agents.Length); // Cap of B_of_AStar * K,
+                                                                                                                // because CBS low level nodes are of one agent only so they're about k times cheaper to work with
             return base.h(s, s.g + targetH, -1, lowLevelGeneratedCap);
         }
 

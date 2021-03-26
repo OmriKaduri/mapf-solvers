@@ -34,8 +34,8 @@ namespace mapf
             this.numOfAgents = problemInstance.agents.Length;
 
             // Store parameters used by the Independence Detection algorithm
-            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAXIMUM_COST_KEY))
-                this.maxSolutionCost = (int)problemInstance.parameters[IndependenceDetection.MAXIMUM_COST_KEY];
+            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAX_COST_KEY))
+                this.maxSolutionCost = (int)problemInstance.parameters[IndependenceDetection.MAX_COST_KEY];
             else
                 this.maxSolutionCost = int.MaxValue;
 
@@ -144,10 +144,11 @@ namespace mapf
             if (!successInTime) //Timeout
             {
                 process.Kill();
-                totalCost = Constants.TIMEOUT_COST;
+                totalCost = Constants.NO_SOLUTION_COST;
                 Console.WriteLine("Out of time");
                 return false;
             }
+            totalCost = 0;
             return true;
         }
 
@@ -238,8 +239,13 @@ namespace mapf
 
         protected int[] singleCosts;
 
-        public int NumStatsColumns => throw new NotImplementedException();
-
+        public int NumStatsColumns
+        {
+            get
+            {
+                return 0;
+            }
+        }
         public virtual int[] GetSingleCosts()
         {
             return this.singleCosts;

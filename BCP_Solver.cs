@@ -37,8 +37,8 @@ namespace mapf
             this.numOfAgents = problemInstance.agents.Length;
 
             // Store parameters used by the Independence Detection algorithm
-            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAXIMUM_COST_KEY))
-                this.maxSolutionCost = (int)problemInstance.parameters[IndependenceDetection.MAXIMUM_COST_KEY];
+            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAX_COST_KEY))
+                this.maxSolutionCost = (int)problemInstance.parameters[IndependenceDetection.MAX_COST_KEY];
             else
                 this.maxSolutionCost = int.MaxValue;
 

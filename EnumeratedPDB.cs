@@ -135,7 +135,7 @@ namespace mapf
         /// pattern database in units of bytes.</returns>
         public override ulong estimateSize()
         {
-            return permutations[0] * problem.numLocations + (ulong) (sizeof(ulong) * permutations.Length);
+            return permutations[0] * problem.numLocations + (ulong)(sizeof(ulong) * permutations.Length);
         }
 
         /// <summary>
@@ -222,13 +222,13 @@ namespace mapf
                             foreach (var a in i.allAgentsState)
                                 nSingleAgentShortestPath += this.problem.GetSingleAgentOptimalCost(a);
                             int nDifference = i.g - nSingleAgentShortestPath;
-                            Debug.Assert(nDifference >= 0);
-                            Debug.Assert(nDifference < Byte.MaxValue);
+                            Trace.Assert(nDifference >= 0);
+                            Trace.Assert(nDifference < Byte.MaxValue);
                             nCandidateValue = (Byte)nDifference;
                         }
                         else
                         {
-                            Debug.Assert(i.g < Byte.MaxValue);
+                            Trace.Assert(i.g < Byte.MaxValue);
                             nCandidateValue = (Byte)i.g;
                         }
                         if (nCandidateValue < table[nHash])
@@ -259,7 +259,7 @@ namespace mapf
                     nSingleAgentShortestPath +=
                         this.problem.GetSingleAgentOptimalCost(s.allAgentsState[a]);
                 }
-            return (table[hash(s)] + (uint) nSingleAgentShortestPath);
+            return (table[hash(s)] + (uint)nSingleAgentShortestPath);
         }
 
         /// <summary>
@@ -368,8 +368,8 @@ namespace mapf
         {
             permutations = new UInt64[agentsToConsider.Count];
             permutations[permutations.Length - 1] = 1;
-            for(var i = permutations.Length - 2; i >= 0; --i)
-                permutations[i] = permutations[i + 1] * (UInt64) (problem.numLocations - (i + 1));
+            for (var i = permutations.Length - 2; i >= 0; --i)
+                permutations[i] = permutations[i + 1] * (UInt64)(problem.numLocations - (i + 1));
         }
     }
 }

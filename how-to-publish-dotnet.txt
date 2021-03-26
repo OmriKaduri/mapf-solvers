@@ -1,0 +1,1 @@
+dotnet publish mapfWin.csproj -c Release --framework netcoreapp3.1 --runtime=linux-x64

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace mapf
 {
@@ -22,12 +23,12 @@ namespace mapf
         {
             this.agentTurn = 0;
         }
-        
+
         public WorldStateWithOD(WorldStateWithOD cpy) : base(cpy)
         {
             this.agentTurn = cpy.agentTurn;
         }
-        
+
         /// <summary>
         /// Used for PDB stuff only
         /// </summary>
@@ -52,7 +53,7 @@ namespace mapf
 
             if (this.agentTurn != 0)
             {
-                subproblem.parameters = new Dictionary<string,object>(subproblem.parameters); // Use a copy to not pollute general problem instance with the must constraints
+                subproblem.parameters = new Dictionary<string, object>(subproblem.parameters); // Use a copy to not pollute general problem instance with the must constraints
                 if (subproblem.parameters.ContainsKey(CBS.MUST_CONSTRAINTS) == false)
                     subproblem.parameters[CBS.MUST_CONSTRAINTS] = new HashSet_U<CbsConstraint>();
                 var mustConstraints = (HashSet_U<CbsConstraint>)subproblem.parameters[CBS.MUST_CONSTRAINTS];
@@ -77,14 +78,14 @@ namespace mapf
                 this.singlePlans = SinglePlan.GetSinglePlans(this);
             else
                 this.singlePlans = SinglePlan.GetSinglePlans(this.prevStep);
-                // ToProblemInstance gives the last proper state as the problem to solve,
-                // with must constraints to make the solution go through the steps already
-                // taken from there.
+            // ToProblemInstance gives the last proper state as the problem to solve,
+            // with must constraints to make the solution go through the steps already
+            // taken from there.
 
             for (int i = 0; i < solution.Length; ++i)
                 this.singlePlans[i].ContinueWith(solution[i]);
         }
-        
+
         public override string ToString()
         {
             string ans = base.ToString();
@@ -115,15 +116,15 @@ namespace mapf
                 return false;
             var that = (WorldStateWithOD)obj;
             if (that.agentTurn != this.agentTurn)
-            // It's tempting to think that this check is enough to allow equivalence over different times,
-            // because it differentiates between a state where all agents have moved and its
-            // child where the first agent WAITed, allowing the child
-            // to be generated because it isn't a hit in the closed list.
-            // But it isn't enough.
-            // This may a partially generated node,
-            // and we may have already gotten to this specific set of agent positions,
-            // but from a different set of locations, so the allowed moves of the remaining agents
-            // that haven't already moved would be different.
+                // It's tempting to think that this check is enough to allow equivalence over different times,
+                // because it differentiates between a state where all agents have moved and its
+                // child where the first agent WAITed, allowing the child
+                // to be generated because it isn't a hit in the closed list.
+                // But it isn't enough.
+                // This may a partially generated node,
+                // and we may have already gotten to this specific set of agent positions,
+                // but from a different set of locations, so the allowed moves of the remaining agents
+                // that haven't already moved would be different.
                 return false;
 
             if (this.agentTurn == 0) // All agents have moved, safe to ignore direction information.
@@ -197,14 +198,15 @@ namespace mapf
         /// </summary>
         /// <param name="conflictAvoidance"></param>
         /// <returns></returns>
-        public override void UpdateConflictCounts(IReadOnlyDictionary<TimedMove, List<int>> conflictAvoidance)
+        public override void IncrementConflictCounts(ConflictAvoidanceTable conflictAvoidance)
         {
             int lastAgentToMove = agentTurn - 1;
             if (agentTurn == 0)
                 lastAgentToMove = allAgentsState.Length - 1;
 
-            allAgentsState[lastAgentToMove].lastMove.UpdateConflictCounts(conflictAvoidance,
-                                                                          this.cbsInternalConflicts, this.conflictTimes);
+            allAgentsState[lastAgentToMove].lastMove.IncrementConflictCounts(conflictAvoidance,
+                                                                          this.conflictCounts, this.conflictTimes);
+            this.sumConflictCounts = this.conflictCounts.Sum(pair => pair.Value);
         }
     }
 }

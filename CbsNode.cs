@@ -62,7 +62,7 @@ namespace mapf
         public ushort depth;
         public ushort[] agentsGroupAssignment;
         public ushort replanSize;
-        public enum ExpansionState: byte
+        public enum ExpansionState : byte
         {
             NOT_EXPANDED = 0,
             DEFERRED,
@@ -138,7 +138,7 @@ namespace mapf
             this.constraint = null;
             this.solver = solver;
             this.singleAgentSolver = singleAgentSolver;
-            this.minimumVertexCover = (int) ConflictGraph.MinVertexCover.NOT_SET;
+            this.minimumVertexCover = (int)ConflictGraph.MinVertexCover.NOT_SET;
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace mapf
             this.replanSize = 1;
             this.solver = parent.solver;
             this.singleAgentSolver = parent.singleAgentSolver;
-            this.minimumVertexCover = (int) ConflictGraph.MinVertexCover.NOT_SET;
+            this.minimumVertexCover = (int)ConflictGraph.MinVertexCover.NOT_SET;
         }
 
         /// <summary>
@@ -235,9 +235,9 @@ namespace mapf
             this.solver = parent.solver;
             this.singleAgentSolver = parent.singleAgentSolver;
             this.cbs = parent.cbs;
-            
+
             this.MergeGroups(mergeGroupA, mergeGroupB);
-            this.minimumVertexCover = (int) ConflictGraph.MinVertexCover.NOT_SET;
+            this.minimumVertexCover = (int)ConflictGraph.MinVertexCover.NOT_SET;
         }
 
         /// <summary>
@@ -266,12 +266,12 @@ namespace mapf
             // Get external CAT and constraints:
             object obj = null;
             problem.parameters.TryGetValue(CBS.CAT, out obj);
-            var CAT = (Dictionary_U<TimedMove, int>)obj;
+            var CAT = (CAT_U)obj;
             var constraints = (HashSet_U<CbsConstraint>)problem.parameters[CBS.CONSTRAINTS];
 
             HashSet_U<CbsConstraint> mustConstraints = null;
             HashSet<CbsConstraint> newMustConstraints = null;
-            Dictionary<int,int> agentsWithMustConstraints = null;
+            Dictionary<int, int> agentsWithMustConstraints = null;
             if (problem.parameters.ContainsKey(CBS.MUST_CONSTRAINTS))
             {
                 mustConstraints = (HashSet_U<CbsConstraint>)problem.parameters[CBS.MUST_CONSTRAINTS];
@@ -303,9 +303,6 @@ namespace mapf
                 subGroups[this.agentsGroupAssignment[i]].Add(problem.agents[i]);
             }
 
-            bool underID = problem.parameters.ContainsKey(IndependenceDetection.ILLEGAL_MOVES_KEY) &&
-                (((HashSet<TimedMove>)problem.parameters[IndependenceDetection.ILLEGAL_MOVES_KEY]).Count != 0);
-
             bool success = true;
 
             int maxPlanSize = -1;
@@ -318,8 +315,11 @@ namespace mapf
                 bool agentGroupHasConstraints = (agentsWithConstraints != null) && subGroup.Any<AgentState>(state => agentsWithConstraints.ContainsKey(state.agent.agentNum));
                 bool agentGroupHasMustConstraints = (agentsWithMustConstraints != null) && subGroup.Any<AgentState>(state => agentsWithMustConstraints.ContainsKey(state.agent.agentNum));
 
+                bool underID = problem.parameters.ContainsKey(IndependenceDetection.ILLEGAL_MOVES_KEY) &&
+                (((HashSet<TimedMove>)problem.parameters[IndependenceDetection.ILLEGAL_MOVES_KEY]).Count != 0);  // FIXME!
+
                 // Solve for a single agent:
-                if (agentGroupHasConstraints == false  &&
+                if (agentGroupHasConstraints == false &&
                     agentGroupHasMustConstraints == false &&
                     underID == false &&
                     subGroup.Count == 1) // Top-most CBS with no must constraints on this agent. Shortcut available (that doesn't consider the CAT, though)
@@ -334,9 +334,9 @@ namespace mapf
                     {
                         var timedMove = (TimedMove)move;  // GetSingleAgentOptimalPlan actually creates a plan with TimedMove instances
                         if (CAT != null)
-                            timedMove.UpdateConflictCounts(CAT, this.conflictCountsPerAgent[i], this.conflictTimesPerAgent[i]);
+                            timedMove.IncrementConflictCounts(CAT, this.conflictCountsPerAgent[i], this.conflictTimesPerAgent[i]);
                         else
-                            timedMove.UpdateConflictCounts(internalCAT, this.conflictCountsPerAgent[i], this.conflictTimesPerAgent[i]);
+                            timedMove.IncrementConflictCounts(internalCAT, this.conflictCountsPerAgent[i], this.conflictTimesPerAgent[i]);
                     }
                     allSingleAgentPlans[i].ContinueWith(optimalPlan);
                     allSingleAgentCosts[i] = problem.agents[i].g + problem.GetSingleAgentOptimalCost(problem.agents[i]);
@@ -424,7 +424,7 @@ namespace mapf
             ProblemInstance problem = this.cbs.GetProblemInstance();
             object obj;
             problem.parameters.TryGetValue(CBS.CAT, out obj);
-            var CAT = (Dictionary_U<TimedMove, int>)obj;
+            var CAT = (CAT_U)obj;
             ConflictAvoidanceTable internalCAT = null; // To quiet the compiler
             int groupNum = this.agentsGroupAssignment[agentToReplan];
             bool underSolve = true;
@@ -444,7 +444,7 @@ namespace mapf
                     else
                         internalCAT.AddPlan(allSingleAgentPlans[i]);
                 }
-                
+
                 CAT?.Join(internalCAT);
             }
             HashSet<CbsConstraint> newConstraints = this.GetConstraints();
@@ -457,7 +457,7 @@ namespace mapf
                 mustConstraints = (HashSet_U<CbsConstraint>)problem.parameters[CBS.MUST_CONSTRAINTS];
                 newMustConstraints = this.GetMustConstraints();
             }
-            
+
             this.replanSize = (ushort)subGroup.Count;
 
             ICbsSolver relevantSolver = this.solver;
@@ -493,7 +493,8 @@ namespace mapf
                 mdd = this.mdds[agentToReplan];
 
             double startTime = this.cbs.runner.ElapsedMilliseconds();
-            relevantSolver.Setup(subProblem, minPathTimeStep, this.cbs.runner, minPathCost, maxPathCost, mdd);
+            relevantSolver.Setup(subProblem, minPathTimeStep, this.cbs.runner, CAT, constraints, mustConstraints,
+                                 minPathCost, maxPathCost, mdd);
             bool solved = relevantSolver.Solve();
             double endTime = this.cbs.runner.ElapsedMilliseconds();
             this.cbs.timePlanningPaths += endTime - startTime;
@@ -531,9 +532,9 @@ namespace mapf
                     {
                         var timedMove = (TimedMove)move;  // The solver actually creates a plan with TimedMove instances
                         if (CAT != null)
-                            timedMove.UpdateConflictCounts(CAT, perAgent, conflictTimes);
+                            timedMove.IncrementConflictCounts(CAT, perAgent, conflictTimes);
                         else
-                            timedMove.UpdateConflictCounts(internalCAT, perAgent, conflictTimes);
+                            timedMove.IncrementConflictCounts(internalCAT, perAgent, conflictTimes);
                     }
                 }
             }
@@ -542,7 +543,7 @@ namespace mapf
                 int agentNum = subGroup[i].agent.agentNum;
                 int agentIndex = this.agentNumToIndex[agentNum];
                 this.allSingleAgentPlans[agentIndex] = singlePlans[i];
-                this.allSingleAgentPlans[agentIndex].agentNum = problem.agents[groupNum].agent.agentNum; // Use the group's representative
+                this.allSingleAgentPlans[agentIndex].agentNum = problem.agents[groupNum].agent.agentNum; // Use the group's representative - that's how the plans will be inserted into the CAT later too.
                 this.allSingleAgentCosts[agentIndex] = singleCosts[i];
                 if (i == 0) // This is the group representative
                 {
@@ -570,7 +571,7 @@ namespace mapf
                 int i = this.agentNumToIndex[agentNumAndAgentNum.Key];
                 if (CAT != null)
                     this.UpdateAtGoalConflictCounts(i, maxPlanSizeOfOtherAgents, CAT);
-                    // Can't use the null coalescing operator because it requires the operands be of the same type :(
+                // Can't use the null coalescing operator because it requires the operands be of the same type :(
                 else
                     this.UpdateAtGoalConflictCounts(i, maxPlanSizeOfOtherAgents, internalCAT);
             }
@@ -589,8 +590,8 @@ namespace mapf
                     }
                     else
                     {
-                        this.conflictCountsPerAgent[i].Remove(representativeAgentNum);
-                        this.conflictTimesPerAgent[i].Remove(representativeAgentNum);
+                        this.conflictCountsPerAgent[i].Remove(representativeAgentNum);  // This part could have been done before replanning
+                        this.conflictTimesPerAgent[i].Remove(representativeAgentNum);  // This part could have been done before replanning
                     }
                 }
 
@@ -732,7 +733,7 @@ namespace mapf
         /// It's cheaper to do it this way than to force the solver the go more deeply.
         /// The conflict counts are saved at the group's representative.
         /// </summary>
-        protected void UpdateAtGoalConflictCounts(int agentIndex, int maxPlanSize, IReadOnlyDictionary<TimedMove, List<int>> CAT)
+        protected void UpdateAtGoalConflictCounts(int agentIndex, int maxPlanSize, ConflictAvoidanceTable CAT)
         {
             ProblemInstance problem = this.cbs.GetProblemInstance();
             var afterGoal = new TimedMove(
@@ -741,7 +742,7 @@ namespace mapf
             for (int time = allSingleAgentPlans[agentIndex].GetSize(); time < maxPlanSize; time++)
             {
                 afterGoal.time = time;
-                afterGoal.UpdateConflictCounts(CAT,
+                afterGoal.IncrementConflictCounts(CAT,
                                                this.conflictCountsPerAgent[this.agentsGroupAssignment[agentIndex]],
                                                this.conflictTimesPerAgent[this.agentsGroupAssignment[agentIndex]]);
             }
@@ -798,8 +799,8 @@ namespace mapf
                 int minReplansToSolve = vertexCover.Count / 2; // We have a 2-approximation of the size of the cover -
                                                                // half that is at least half the value we're trying to approximate.
                                                                // (The size of the approximation is always even)
-                //if (this.cbs.debug)
-                //    Debug.WriteLine("min replans lower estimate: " + minReplansToSolve);
+                                                               //if (this.cbs.debug)
+                                                               //    Debug.WriteLine("min replans lower estimate: " + minReplansToSolve);
                 if (this.cbs.mergeThreshold != -1) // Merges possible, account for them
                                                    // This assumes the current merging strategy is used.
                 {
@@ -962,7 +963,7 @@ namespace mapf
                 if (hasConflict == false)
                 {
                     this.DebugPrint();
-                    Debug.Assert(false, "Non-goal node found no conflict");
+                    Trace.Assert(false, "Non-goal node found no conflict");
                 }
                 this.conflict = this.nextConflicts.Current;
             }
@@ -974,7 +975,7 @@ namespace mapf
                 if (hasConflict == false)
                 {
                     this.DebugPrint();
-                    Debug.Assert(false, "Non-goal node found no conflict");
+                    Trace.Assert(false, "Non-goal node found no conflict");
                 }
                 this.conflict = this.nextConflicts.Current;
                 //FIXME: code dup with previous option
@@ -1153,9 +1154,9 @@ namespace mapf
             var PossiblyCardinalFirstCanBuildMdd = new Queue<(int agentAIndex, int agentBIndex, int conflictTime)>(this.totalConflictsBetweenInternalAgents); // Going over these just get the first element, build its MDD and 
             var AgentIndexesWaitingToCheckTheirConflictsForCardinality = new Queue<int>(Enumerable.Range(0, this.allSingleAgentPlans.Length)); // Initially go over all conflicting agents.
                                                                                                                                                // TODO: this will also go over non-conflicting agents harmlessly. Is there an easy way to get a list of agents that have conflicts?
-            // Positively cardinal conflicts are just yielded immediately
-            // Conflicting agents are only entered into a queue once. Only if the conflicting agent with the larger index
-            // can have an MDD built and the one with the lower can't, a pair of conflicting agents is entered in reverse.
+                                                                                                                                               // Positively cardinal conflicts are just yielded immediately
+                                                                                                                                               // Conflicting agents are only entered into a queue once. Only if the conflicting agent with the larger index
+                                                                                                                                               // can have an MDD built and the one with the lower can't, a pair of conflicting agents is entered in reverse.
 
             bool allowAgentOrderFlip = true; // Needed when rechecking agents to signal that we shouldn't 
                                              // rely on the other end to check a conflict
@@ -1275,7 +1276,7 @@ namespace mapf
                 }
 
                 allowAgentOrderFlip = false;  // We've flipped all we needed above
-                
+
                 // 2.
                 if (PossiblyCardinalFirstHasMddSecondDoesNotButCan.Count != 0)
                 {
@@ -1331,7 +1332,7 @@ namespace mapf
                     AgentIndexesWaitingToCheckTheirConflictsForCardinality.Enqueue(agentToBuildAnMddFor);
                     continue;
                 }
-                
+
                 break; // No more queues to loot
             }
 
@@ -1394,14 +1395,14 @@ namespace mapf
                 yield return conflict;
             }
 
-            Debug.Assert(NotCardinalMaybeSemi.Count == 0);
-            Debug.Assert(NotCardinalNotSemi.Count == 0);
-            Debug.Assert(SemiCardinal.Count == 0);
-            Debug.Assert(PossiblyCardinalFirstHasMddSecondDoesNotButCan.Count == 0);
-            Debug.Assert(PossiblyCardinalFirstHasMddSecondCannot.Count == 0);
-            Debug.Assert(PossiblyCardinalBothCannotBuildMdd.Count == 0);
-            Debug.Assert(PossiblyCardinalFirstCanBuildMdd.Count == 0);
-            Debug.Assert(AgentIndexesWaitingToCheckTheirConflictsForCardinality.Count == 0);
+            Trace.Assert(NotCardinalMaybeSemi.Count == 0);
+            Trace.Assert(NotCardinalNotSemi.Count == 0);
+            Trace.Assert(SemiCardinal.Count == 0);
+            Trace.Assert(PossiblyCardinalFirstHasMddSecondDoesNotButCan.Count == 0);
+            Trace.Assert(PossiblyCardinalFirstHasMddSecondCannot.Count == 0);
+            Trace.Assert(PossiblyCardinalBothCannotBuildMdd.Count == 0);
+            Trace.Assert(PossiblyCardinalFirstCanBuildMdd.Count == 0);
+            Trace.Assert(AgentIndexesWaitingToCheckTheirConflictsForCardinality.Count == 0);
         }
 
         /// <summary>
@@ -1725,7 +1726,7 @@ namespace mapf
         /// <param name="child"></param>
         public void AdoptSolutionOf(CbsNode child)
         {
-            Debug.Assert(this.g == child.g, "Tried to adopt node of a different cost");
+            Trace.Assert(this.g == child.g, "Tried to adopt node of a different cost");
             this.agentAExpansion = CbsNode.ExpansionState.NOT_EXPANDED;
             this.agentBExpansion = CbsNode.ExpansionState.NOT_EXPANDED;
             this.allSingleAgentCosts = child.allSingleAgentCosts;
@@ -1784,7 +1785,7 @@ namespace mapf
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public override bool Equals(object obj) 
+        public override bool Equals(object obj)
         {
             if (obj == null)
                 return false;
@@ -1849,7 +1850,7 @@ namespace mapf
                 return -1;
             if (this.totalConflictsWithExternalAgents > other.totalConflictsWithExternalAgents)
                 return 1;
-            
+
             // Prefer goal nodes. The elaborate form is to keep the comparison consistent. Without it goalA<goalB and also goalB<goalA.
             if (this.GoalTest() == true && other.GoalTest() == false)
                 return -1;
@@ -2145,7 +2146,7 @@ namespace mapf
 
             for (int i = 0; i < agentsGroupAssignment.Length; i++)
                 groupSizes[i] = counts[this.agentsGroupAssignment[i]];
-            
+
             return groupSizes;
         }
 
@@ -2183,15 +2184,12 @@ namespace mapf
         /// </summary>
         /// <param name="a">Index of first group representative</param>
         /// <param name="b">Index of second group representative</param>
-        /// <param name="fixCounts"></param>
+        /// <param name="fixCounts">Can be set to false as an optimization when counts aren't needed</param>
         public void MergeGroups(int a, int b, bool fixCounts = true)
         {
             if (b < a)
-            {
-                int c = a;
-                a = b;
-                b = c;
-            }
+                (a, b) = (b, a);
+
             ProblemInstance problem = this.cbs.GetProblemInstance();
             int aAgentNum = problem.agents[a].agent.agentNum;
             int bAgentNum = problem.agents[b].agent.agentNum;
@@ -2254,7 +2252,7 @@ namespace mapf
             for (int i = moves.Count - 2; i >= 0; i--)
             {
                 if (moves[i].Equals(goal) == false) // Note the move that gets to the goal is different to the move that first waits in it.
-                    return  i + 1;
+                    return i + 1;
             }
             return 0;
         }
@@ -2278,7 +2276,8 @@ namespace mapf
 
         private bool isGoal = false;
 
-        public bool GoalTest() {
+        public bool GoalTest()
+        {
             if (this.g < this.cbs.minSolutionCost)
                 return false;
             return isGoal;
@@ -2298,7 +2297,7 @@ namespace mapf
             var internalCAT = new ConflictAvoidanceTable();
             HashSet<CbsConstraint> newConstraints = this.GetConstraints();
             ProblemInstance problem = this.cbs.GetProblemInstance();
-            var CAT = (Dictionary_U<TimedMove, int>)problem.parameters[CBS.CAT];
+            var CAT = (CAT_U)problem.parameters[CBS.CAT];
             var constraints = (HashSet_U<CbsConstraint>)problem.parameters[CBS.CONSTRAINTS];
             var mustConstraints = (HashSet_U<CbsConstraint>)problem.parameters[CBS.MUST_CONSTRAINTS];
             HashSet<CbsConstraint> newMustConstraints = this.GetMustConstraints();
@@ -2336,7 +2335,8 @@ namespace mapf
             if (this.cbs.replanSameCostWithMdd)
                 mdd = this.mdds[agentToReplan];
             double startTime = this.cbs.runner.ElapsedMilliseconds();
-            relevantSolver.Setup(subProblem, depthToReplan, this.cbs.runner, minPathCost, maxPathCost, mdd);
+            relevantSolver.Setup(subProblem, depthToReplan, this.cbs.runner, CAT, constraints, mustConstraints,
+                                 minPathCost, maxPathCost, mdd);
             bool solved = relevantSolver.Solve();
             double endTime = this.cbs.runner.ElapsedMilliseconds();
             this.cbs.timePlanningPaths += endTime - startTime;
@@ -2365,7 +2365,7 @@ namespace mapf
                     j++;
                 }
             }
-            Debug.Assert(j == replanSize);
+            Trace.Assert(j == replanSize);
 
             // Calc g
             if (Constants.costFunction == Constants.CostFunction.SUM_OF_COSTS)

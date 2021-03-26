@@ -70,11 +70,6 @@ namespace mapf
             return this.generated;
         }
 
-        public int GetMaxGroupSize()
-        {
-            return 1;
-        }
-
         public long GetMemoryUsed()
         {
             return Process.GetCurrentProcess().VirtualMemorySize64;
@@ -110,7 +105,7 @@ namespace mapf
         {
             return this.totalcost - this.initialEstimate;
         }
-        
+
         /// <summary>
         /// Prints statistics of a single run to the given output. 
         /// </summary>
@@ -174,7 +169,7 @@ namespace mapf
                 if (node.h == 0)
                 {
                     bool valid = true;
-                    for (int i = node.lastMove.time ; i <= maxPathCostSoFar; i++)
+                    for (int i = node.lastMove.time; i <= maxPathCostSoFar; i++)
                     {
                         queryTimedMove.setup(node.lastMove.x, node.lastMove.y, Move.Direction.NO_DIRECTION, i);
                         if (reservationTable.Contains(queryTimedMove))

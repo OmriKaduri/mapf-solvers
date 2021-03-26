@@ -30,10 +30,6 @@ namespace mapf
         /// </summary>
         public const int MAX_FAIL_COUNT = 1;
         /// <summary>
-        /// This determines whether the ICTS should search for a solution with lowest conflicts for the ID framework
-        /// </summary>
-        public static bool EXHAUSTIVE_ICTS = false;
-        /// <summary>
         /// Allow head-on collisions
         /// </summary>
         public const bool ALLOW_HEAD_ON_COLLISION = false;

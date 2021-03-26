@@ -269,8 +269,8 @@ namespace mapf
             maxSizeGroup = 1;
             this.totalCost = 0;
 
-            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAXIMUM_COST_KEY))
-                this.maxCost = (int)(problemInstance.parameters[IndependenceDetection.MAXIMUM_COST_KEY]);
+            if (problemInstance.parameters.ContainsKey(IndependenceDetection.MAX_COST_KEY))
+                this.maxCost = (int)(problemInstance.parameters[IndependenceDetection.MAX_COST_KEY]);
             else
                 this.maxCost = int.MaxValue;
 

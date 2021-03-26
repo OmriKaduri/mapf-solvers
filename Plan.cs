@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
-using System.IO;
+using System.Text;
+using ExtensionMethods;
 
 namespace mapf
 {
@@ -57,7 +58,7 @@ namespace mapf
             {
                 locationsAtTimes.AddLast(new List<Move>());
             }
-            
+
             foreach (LinkedList<Move> agentRoute in routePerAgent)
             {
                 LinkedListNode<List<Move>> locationsAtTime = this.locationsAtTimes.First;
@@ -137,27 +138,38 @@ namespace mapf
                     if (newLocationsAtTime.SequenceEqual<Move>(this.locationsAtTimes.Last.Value))
                         continue;
                     else
-                        Debug.Assert(false, "Continuing a plan doesn't start from the same state");
+                        Trace.Assert(false, "Continuing a plan doesn't start from the same state");
                 }
                 this.locationsAtTimes.AddLast(newLocationsAtTime);
             }
         }
 
-        // TODO: Add GetCost and GetMakespan methods!
+        public void Check(ProblemInstance problem)
+        {
+            SinglePlan[] singles = new SinglePlan[this.locationsAtTimes.First().Count];
+            for (int i = 0; i < singles.Length; i++)
+            {
+                singles[i] = new SinglePlan(this, i, problem.agents[i].agent.agentNum);
+                foreach ((int time, var move) in singles[i].locationAtTimes.Enumerate())
+                    Trace.Assert(problem.IsValid(move), $"Plan of agent {i} uses an invalid location {move} at time {time}!");
+            }
 
-        ///// <summary>
-        ///// Not used. Creates SinglePlans with possibly wrong agentNum (agent index used for agentNum)
-        ///// </summary>
-        ///// <returns></returns>
-        //public SinglePlan[] GetSinglePlans()
-        //{
-        //    SinglePlan[] ans = new SinglePlan[this.locationsAtTimes.First().Count];
-        //    for (int i = 0; i < ans.Length; i++)
-        //    {
-        //        ans[i] = new SinglePlan(this, i);
-        //    }
-        //    return ans;
-        //}
+            // Check in every time step that the plans do not collide
+            for (int time = 1; time < this.locationsAtTimes.Count; time++) // Assuming no conflicts exist in time zero.
+            {
+                // Check all pairs of agents for a collision at the given time step
+                foreach ((int i1, var plan1) in singles.Enumerate())
+                {
+                    foreach ((int i2, var plan2) in singles.Enumerate())
+                    {
+                        if (i1 < i2)
+                            Trace.Assert(plan1.IsColliding(time, plan2) == false, $"Plans of agents {i1} and {i2} collide at time {time}!");
+                    }
+                }
+            }
+        }
+
+        // TODO: Add GetCost and GetMakespan methods!
 
         /// <summary>
         /// Returns the location of the agents at a given time. 
@@ -168,8 +180,18 @@ namespace mapf
         /// <returns>A list of Moves that are the locations of the different agents at the requested time</returns>
         public List<Move> GetLocationsAt(int time)
         {
-            time = Math.Min(time, this.locationsAtTimes.Count - 1);
-            return this.locationsAtTimes.ElementAt<List<Move>>(time); // FIXME: Expensive!
+            if (time < this.locationsAtTimes.Count)
+                return this.locationsAtTimes.ElementAt(time); // FIXME: Expensive!
+            else
+            {
+                var toCopy = this.locationsAtTimes.Last.Value;
+                var atRest = toCopy.ToList();
+                for (int i = 0; i < atRest.Count; i++)
+                {
+                    atRest[i] = new Move(atRest[i].x, atRest[i].y, Move.Direction.Wait);
+                }
+                return atRest;
+            }
         }
 
         public LinkedList<List<Move>> GetLocations()
@@ -221,65 +243,19 @@ namespace mapf
                 foreach (Move aMove in locationsAtTime)
                 {
                     Console.Write(aMove.ToString() + "|");
-                }                
-                Console.WriteLine();
-            }
-        }
-
-        public string cleanSolverName(string solverName)
-        {
-            switch (solverName)
-            {
-                case "MA-CBS-Local-10/(single:A*/SIC multi:EPEA*/SIC) choosing the first conflict in CBS nodes without smart tie breaking":
-                    return "MA-CBS";
-                case "ICTS 3E +ID":
-                    return "ICTS";
-                case "EPEA*+ID":
-                    return "EPEA";
-                case "CBS/(A*/SIC) + BP + PC without smart tie breaking using Dynamic Lazy Open List with Heuristic MVC of Cardinal Conflict Graph Heuristic":
-                    return "CBS-H";
-                default:
-                    return solverName;
-            }
-        }
-
-        public void PrintPlanTo(string solverName, string plan_file = "")
-        {
-            if (string.IsNullOrEmpty(plan_file))
-                return;
-            var plan_writer = new StreamWriter(plan_file, true);
-            solverName = cleanSolverName(solverName);
-            plan_writer.WriteLine("Solver:{0}", solverName);
-            plan_writer.WriteLine("Length:{0}", this.locationsAtTimes.Count);
-
-            int move_num = 0;
-            foreach (List<Move> locationsAtTime in this.locationsAtTimes)
-            {
-                plan_writer.Write("{0}:", move_num);
-                foreach (Move aMove in locationsAtTime)
-                {
-                    plan_writer.Write(aMove.ToString() + ",");
                 }
-                move_num++;
-                plan_writer.Write("|");
+                Console.WriteLine("");
             }
-            plan_writer.WriteLine("");
-            plan_writer.Close();
         }
 
         public override string ToString()
         {
-            string s = "";
+            var s = new StringBuilder();
             foreach (List<Move> locationsAtTime in this.locationsAtTimes)
             {
-                s += "";
-                foreach (Move aMove in locationsAtTime)
-                {
-                    s += $"{aMove}|";
-                }
-                s += "\n";
+                s.Append($"|{String.Join("|", locationsAtTime)}|\n");
             }
-            return s;
+            return s.ToString();
         }
 
         public HashSet<TimedMove> AddPlanToHashSet(HashSet<TimedMove> addTo, int until)
@@ -289,7 +265,7 @@ namespace mapf
                 List<Move> step = this.GetLocationsAt(i);
                 foreach (Move move in step)
                 {
-                    addTo.Add(new TimedMove(move,i));
+                    addTo.Add(new TimedMove(move, i));
                 }
             }
             return addTo;
@@ -332,7 +308,7 @@ namespace mapf
             this.locationAtTimes = new List<Move>();
             foreach (List<Move> movesAtTimestep in plan.GetLocations())
             {
-                this.locationAtTimes.Add(movesAtTimestep.ElementAt<Move>(agentIndex));
+                this.locationAtTimes.Add(movesAtTimestep[agentIndex]);
             }
         }
 
@@ -421,7 +397,7 @@ namespace mapf
                     if (this.locationAtTimes[this.locationAtTimes.Count - 1].Equals(newLocationAtTime))
                         continue;
                     else
-                        Debug.Assert(false, "Continuing a plan doesn't start from the same state");
+                        Trace.Assert(false, "Continuing a plan doesn't start from the same state");
                 }
                 this.locationAtTimes.Add(newLocationAtTime);
             }

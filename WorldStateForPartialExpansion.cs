@@ -25,12 +25,22 @@ namespace mapf
         /// Only computed on demand
         /// </summary>
         protected ushort maxDeltaF;
+        public enum DeltaFAchievable : sbyte
+        {
+            YES = 1,
+            NO = -1,
+            NOT_YET_COMPUTED = 0
+        }
         /// <summary>
         /// Per each agent and delta F, has 1 if that delta F is achievable by moving the agents starting from this one on,
         /// -1 if it isn't, and 0 if we don't know yet.
         /// Only computed on demand
         /// </summary>
-        protected sbyte[][] fLookup; 
+        protected DeltaFAchievable[][] fLookup;
+        /// <summary>
+        /// The node's SIC heuristic estimate
+        /// </summary>
+        public int sic;
 
         /// <summary>
         /// Create a state with the given state for every agent.
@@ -38,14 +48,14 @@ namespace mapf
         /// <param name="allAgentsState"></param>
         /// <param name="minDepth"></param>
         /// <param name="minCost"></param>
-        public WorldStateForPartialExpansion(AgentState[] allAgentsState, int minDepth = -1,
-                                             int minCost = -1, MDDNode mddNode = null):
-            base(allAgentsState, minDepth, minCost, mddNode)
+        public WorldStateForPartialExpansion(AgentState[] allAgentState, int minDepth = -1,
+                                             int minCost = -1, MDDNode mddNode = null) :
+            base(allAgentState, minDepth, minCost, mddNode)
         {
             this.alreadyExpanded = false;
             this.maxDeltaF = 0;
             this.singleAgentDeltaFs = null;
-            this.fLookup = null; 
+            this.fLookup = null;
         }
 
         /// <summary>
@@ -77,24 +87,9 @@ namespace mapf
             this.fLookup = null;
         }
 
-        public override int CompareTo(IBinaryHeapItem other)
-        {
-            this.h += this.targetDeltaF;
-            WorldStateForPartialExpansion otherNode = (WorldStateForPartialExpansion)other;
-            otherNode.h += otherNode.targetDeltaF;
-
-            int res = base.CompareTo(other);
-
-            this.h -= this.targetDeltaF;
-            otherNode.h -= otherNode.targetDeltaF;
-
-            return res;
-        }
-
         public override string ToString()
         {
-            //return base.ToString() + "\nTarget delta F = " + this.targetDeltaF;
-            return base.ToString() + " with target delta F = " + this.targetDeltaF;
+            return $"{base.ToString()} (sic:{this.sic} target deltaF: {this.targetDeltaF})";
         }
 
         public delegate bool ValidityChecker(TimedMove move, IReadOnlyDictionary<TimedMove, int> currentMoves, int makespan, int agentIndex, WorldState node, WorldState intermediateNode);
@@ -126,14 +121,14 @@ namespace mapf
             for (int i = 0; i < allAgentsState.Length; i++)
             {
                 hBefore = problem.GetSingleAgentOptimalCost(allAgentsState[i]);
-                
+
                 int singleAgentMaxLegalDeltaF = -1;
 
                 foreach (TimedMove check in allAgentsState[i].lastMove.GetNextMoves())
                 {
-                    if (isValid(check, noMoves, this.makespan + 1, i, this, this) == false)
+                    if (isValid(check, noMoves, this.makespan + 1, i, this, this) == false)  // Is this move by itself invalid because of constraints or obstacles
                     {
-                         singleAgentDeltaFs[i][(int)check.direction] = byte.MaxValue;
+                        singleAgentDeltaFs[i][(int)check.direction] = byte.MaxValue;
                     }
                     else
                     {
@@ -165,32 +160,38 @@ namespace mapf
                     break;
                 }
 
-                this.maxDeltaF += (byte) singleAgentMaxLegalDeltaF;
+                this.maxDeltaF += (byte)singleAgentMaxLegalDeltaF;
             }
 
-            fLookup = new sbyte[allAgentsState.Length][];
+            fLookup = new DeltaFAchievable[allAgentsState.Length][];
             for (int i = 0; i < fLookup.Length; i++)
             {
-                fLookup[i] = new sbyte[this.maxDeltaF + 1]; // Towards the last agents most of the row will be wasted (the last one can do delta F of 0 or 1),
-                                                            // but it's easier than fiddling with array sizes
+                fLookup[i] = new DeltaFAchievable[this.maxDeltaF + 1]; // Towards the last agents most of the row will be wasted (the last one can do delta F of 0 or 1),
+                                                                       // but it's easier than fiddling with array sizes
             }
         }
 
         /// <summary>
-        /// Returns whether all possible f values were generated from this node already
+        /// Returns whether all possible f values were generated from this node already.
+        /// Assumes calcSingleAgentDeltaFs was called earlier.
         /// </summary>
         /// <returns></returns>
         public bool hasMoreChildren()
         {
             return this.targetDeltaF <= this.maxDeltaF;
         }
-        
+
         public bool IsAlreadyExpanded()
         {
             return alreadyExpanded;
         }
 
-        public bool hasChildrenForCurrentDeltaF(int agentNum=0)
+        /// <summary>
+        /// Assumes calcSingleAgentDeltaFs was called earlier.
+        /// </summary>
+        /// <param name="agentNum"></param>
+        /// <returns></returns>
+        public bool hasChildrenForCurrentDeltaF(int agentNum = 0)
         {
             return existsChildForF(agentNum, this.remainingDeltaF);
         }
@@ -210,10 +211,10 @@ namespace mapf
                     return true;
                 return false;
             }
-            
-            if (fLookup[agentNum][remainingTargetDeltaF] != 0) // Answer known (arrays are initialized to zero). TODO: Replace the magic.
+
+            if (fLookup[agentNum][remainingTargetDeltaF] != DeltaFAchievable.NOT_YET_COMPUTED) // Answer known (arrays are initialized to zero).
             {
-                return fLookup[agentNum][remainingTargetDeltaF] == 1; // Return known answer. TODO: Replace the magic
+                return fLookup[agentNum][remainingTargetDeltaF] == DeltaFAchievable.YES; // Return known answer.
             }
 
             // Recursive actions:
@@ -226,11 +227,11 @@ namespace mapf
                     continue;
                 if (existsChildForF(agentNum + 1, (byte)(remainingTargetDeltaF - singleAgentDeltaFs[agentNum][direction])))
                 {
-                    fLookup[agentNum][remainingTargetDeltaF] = 1;
+                    fLookup[agentNum][remainingTargetDeltaF] = DeltaFAchievable.YES;
                     return true;
                 }
             }
-            fLookup[agentNum][remainingTargetDeltaF] = -1;
+            fLookup[agentNum][remainingTargetDeltaF] = DeltaFAchievable.NO;
             return false;
         }
 
@@ -239,8 +240,11 @@ namespace mapf
         /// Using the data that describes its delta F potential before the move.
         /// </summary>
         /// <param name="agentIndex"></param>
-        public void UpdateRemainingDeltaF(int agentIndex) {
-            Debug.Assert(this.remainingDeltaF != ushort.MaxValue, "Remaining deltaF is ushort.MaxValue, a reserved value with special meaning. agentIndex=" + agentIndex);
+        public void UpdateRemainingDeltaF(int agentIndex)
+        {
+            if (this.remainingDeltaF == ushort.MaxValue)
+                Trace.Assert(false,
+                             $"Remaining deltaF is ushort.MaxValue, a reserved value with special meaning. agentIndex={agentIndex}");
 
             byte lastMoveDeltaF = this.singleAgentDeltaFs[agentIndex][(int)this.allAgentsState[agentIndex].lastMove.direction];
             if (lastMoveDeltaF != byte.MaxValue && this.remainingDeltaF >= lastMoveDeltaF)
@@ -270,7 +274,8 @@ namespace mapf
         {
             get
             {
-                return this.g + this.h + this.targetDeltaF;
+                return Math.Max(this.g + this.h,
+                                this.g + this.sic + this.targetDeltaF);
             }
         }
     }

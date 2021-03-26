@@ -3,8 +3,9 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
-//using SharpLearning.XGBoost.Learners;
-//using SharpLearning.XGBoost.Models;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using ExtensionMethods;
 
 namespace mapf
 {
@@ -13,53 +14,77 @@ namespace mapf
         // The key of the illegal moves table in the ProblemInstance (used in ImprovedID())
         public static string ILLEGAL_MOVES_KEY = "ID-reserved";
         // The key of the maximal solution cost of the agent group in the ProblemInstance (used in ImprovedID())
-        public static string MAXIMUM_COST_KEY = "ID-max-cost";
+        public static string MAX_COST_KEY = "ID-max-cost";
         // The key of the conflict avoidance table
-        public static string CONFLICT_AVOIDANCE = "ID-ConflictAvoidance";
+        //public static string CONFLICT_AVOIDANCE = "ID-ConflictAvoidance";
+        // The key for the size of the first parent group (used in ImprovedID())
+        //public static string PARENT_GROUP_1_SIZE = "ID-parent-group-1-size";
+        // The key for the cost of the first parent group (used in ImprovedID())
+        //public static string PARENT_GROUP_1_COST = "ID-parent-group-1-cost";
+        // The key for the cost of the second parent group (used in ImprovedID())
+        //public static string PARENT_GROUP_2_COST = "ID-parent-group-2-cost";
 
         protected LinkedList<IndependenceDetectionAgentsGroup> allGroups;
+        /// <summary>
+        /// For each group in the problem instance, maps group nums it conflicts with to the number of conflicts betweem them.
+        /// </summary>
+        public Dictionary<int, int>[] conflictCountsPerGroup;
+        /// <summary>
+        /// For each group in the problem instance, maps group nums of groups it collides with to the time of their first collision.
+        /// </summary>
+        public Dictionary<int, List<int>>[] conflictTimesPerGroup;
+        /// <summary>
+        /// For each group in the problem instance, saves the number of agents from the problem instance that it conflicts with.
+        /// Used for choosing the next conflict to resolve.
+        /// </summary>
+        public int[] countsOfGroupsThatConflict;
+        public int totalConflictCount = 0;
         protected ProblemInstance instance;
-        protected int expanded;
-        protected int generated;
+        protected int expanded;  // TODO: remove and just rely on the subsolvers to accumulate
+        protected int generated;  // TODO: remove and just rely on the subsolvers to accumulate
+        protected int resolutionAttempts;
+        //TODO: add a successfulResolutions statistic 
+        protected int merges;
         protected int accExpanded;
         protected int accGenerated;
+        protected int accResolutionAttempts;
+        protected int accMerges;
         public int totalCost;
         protected Run runner;
-
-        public Boolean withSelection;
 
         /// <summary>
         /// The complete plan for all the agents that was found.
         /// </summary>
         public Plan plan;
-        
+
         protected int maxGroupSize;
         protected int minGroupSize;
         protected int accMaxGroupSize;
         protected int accMinGroupSize;
-        public ISolver groupSolver;
-        public ISolver singleAgentSolver;
-        private ISet<IndependenceDetectionConflict> allConflicts;
+        public IIndependenceDetectionSolver groupSolver;
+        public IIndependenceDetectionSolver singleAgentSolver;
+        private ISet<IndependenceDetectionConflict> resolutionAttemptedFirstGroup;
+        private ISet<IndependenceDetectionConflict> resolutionAttemptedSecondGroup;
         private int solutionDepth;
-        private Dictionary<TimedMove, List<int>> conflictAvoidance;
+        private ConflictAvoidanceTable conflictAvoidanceTable;
         private int maxSolutionCostFound;
 
-        //Variables for ID + AS
-        private int subproblem_id;
-
-        public IndependenceDetection(ISolver singleAgentSolver, ISolver groupSolver, Boolean withSelection = false)
+        public IndependenceDetection(IIndependenceDetectionSolver singleAgentSolver, IIndependenceDetectionSolver groupSolver)
         {
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
-            this.withSelection = withSelection;
         }
 
         public void Clear()
         {
             this.allGroups.Clear();
+            this.singleAgentSolver.Clear();
             this.groupSolver.Clear();
-            this.allConflicts.Clear();
-            this.conflictAvoidance.Clear();
+            this.resolutionAttemptedFirstGroup.Clear();
+            this.resolutionAttemptedSecondGroup.Clear();
+            this.conflictAvoidanceTable.Clear();
+            this.solutionDepth = -1;
+            this.maxSolutionCostFound = -1;
         }
 
         public void Setup(ProblemInstance instance, Run runner)
@@ -68,35 +93,35 @@ namespace mapf
             this.runner = runner;
             this.totalCost = 0;
             this.ClearStatistics();
-            this.conflictAvoidance = new Dictionary<TimedMove, List<int>>();
-            this.allConflicts = new HashSet<IndependenceDetectionConflict>();
+            this.conflictAvoidanceTable = new ConflictAvoidanceTable();
+            this.conflictAvoidanceTable.avoidanceGoal = ConflictAvoidanceTable.AvoidanceGoal.MINIMIZE_CONFLICTING_GROUPS;  // The effect of a conflict between two groups is total in ID - they're either fully merged or try to fully avoid each other's plan
+            this.resolutionAttemptedFirstGroup = new HashSet<IndependenceDetectionConflict>();
+            this.resolutionAttemptedSecondGroup = new HashSet<IndependenceDetectionConflict>();
             this.allGroups = new LinkedList<IndependenceDetectionAgentsGroup>();
             // Initialize the agent group collection with a group for every agent
             foreach (AgentState agentStartState in instance.agents)
-                this.allGroups.AddLast(
-                    new IndependenceDetectionAgentsGroup(
-                        this.instance, new AgentState[1] { agentStartState },
-                        this.singleAgentSolver, this.groupSolver, runner, 0));
-            
-            this.subproblem_id = 0;
-
+            {
+                this.allGroups.AddLast(new IndependenceDetectionAgentsGroup(
+                                            this.instance, new AgentState[1] { agentStartState },
+                                            this.singleAgentSolver, this.groupSolver)
+                );
+            }
+            conflictCountsPerGroup = new Dictionary<int, int>[instance.GetNumOfAgents()];
+            conflictTimesPerGroup = new Dictionary<int, List<int>>[instance.GetNumOfAgents()];
+            for (int i = 0; i < instance.GetNumOfAgents(); i++)
+            {
+                conflictCountsPerGroup[i] = new Dictionary<int, int>();
+                conflictTimesPerGroup[i] = new Dictionary<int, List<int>>();
+            }
+            countsOfGroupsThatConflict = new int[instance.GetNumOfAgents()];
         }
 
-        public virtual String GetName() {
-            if (this.withSelection)
-            {
-                return "ID+AS"; //Group solver has no meaning when it is choosed by AS
-            }
-            else
-            {
-                return groupSolver.GetName() + "+ID";
-            }
-        }
+        public virtual String GetName() { return groupSolver.GetName() + "+ID"; }
 
         /// <summary>
         /// Calculate the full plan for all the agents that has been found by the algorithm
         /// </summary>
-        public Plan CalculateJointPlan() 
+        public Plan CalculateJointPlan()
         {
             var singlePlans = new SinglePlan[this.instance.GetNumOfAgents()];
             foreach (var group in this.allGroups)
@@ -108,7 +133,7 @@ namespace mapf
                     singlePlans[agentState.agent.agentNum] = new SinglePlan(groupPlan, i, agentState.agent.agentNum);
                     i++;
                 }
-                    
+
             }
             return new Plan(singlePlans);
         }
@@ -131,6 +156,10 @@ namespace mapf
             output.Write(Run.RESULTS_DELIMITER);
             output.Write(this.ToString() + " Min Group Size");
             output.Write(Run.RESULTS_DELIMITER);
+            output.Write(this.ToString() + " Resolution Attempts");
+            output.Write(Run.RESULTS_DELIMITER);
+            output.Write(this.ToString() + " Merges");
+            output.Write(Run.RESULTS_DELIMITER);
         }
 
         /// <summary>
@@ -144,31 +173,26 @@ namespace mapf
             output.Write(this.expanded + Run.RESULTS_DELIMITER);
             output.Write(this.generated + Run.RESULTS_DELIMITER);
 
-            // Compute and output the maximum group size
-            this.maxGroupSize = 0;
-            this.solutionDepth = 0;
-            this.minGroupSize = this.instance.agents.Length;
-            foreach (var group in this.allGroups)
-            {
-                this.solutionDepth += group.depthOfSolution;
-                if (group.allAgentsState.Length > this.maxGroupSize)
-                    this.maxGroupSize = group.allAgentsState.Length;
-                if (group.allAgentsState.Length < this.minGroupSize)
-                    this.minGroupSize = group.allAgentsState.Length;
-            }
+            this.minGroupSize = this.allGroups.Min(group => group.allAgentsState.Length);  // MaxGroupSize is computed every time we merge
 
             Console.WriteLine("Max Group: {0}", this.maxGroupSize);
             Console.WriteLine("Min Group: {0}", this.minGroupSize);
 
             output.Write(this.maxGroupSize + Run.RESULTS_DELIMITER);
             output.Write(this.minGroupSize + Run.RESULTS_DELIMITER);
+
+            Console.WriteLine("Resolution Attempts: {0}", this.resolutionAttempts);
+            Console.WriteLine("Merges: {0}", this.merges);
+
+            output.Write(this.resolutionAttempts + Run.RESULTS_DELIMITER);
+            output.Write(this.merges + Run.RESULTS_DELIMITER);
         }
 
         public int NumStatsColumns
         {
             get
             {
-                return 4;
+                return 6;
             }
         }
 
@@ -178,6 +202,8 @@ namespace mapf
             this.generated = 0;
             this.maxGroupSize = 1;
             this.minGroupSize = instance.agents.Length;
+            this.resolutionAttempts = 0;
+            this.merges = 0;
         }
 
         public void ClearAccumulatedStatistics()
@@ -186,6 +212,8 @@ namespace mapf
             this.accGenerated = 0;
             this.accMaxGroupSize = 1;
             this.accMinGroupSize = this.instance.agents.Length;
+            this.accResolutionAttempts = 0;
+            this.accMerges = 0;
         }
 
         public void AccumulateStatistics()
@@ -194,6 +222,8 @@ namespace mapf
             this.accGenerated += this.generated;
             this.accMaxGroupSize = Math.Max(this.accMaxGroupSize, this.maxGroupSize);
             this.accMinGroupSize = Math.Min(this.accMinGroupSize, this.minGroupSize);
+            this.accResolutionAttempts += this.resolutionAttempts;
+            this.accMerges += this.merges;
         }
 
         public void OutputAccumulatedStatistics(TextWriter output)
@@ -209,57 +239,193 @@ namespace mapf
 
             output.Write(this.accMaxGroupSize + Run.RESULTS_DELIMITER);
             output.Write(this.accMinGroupSize + Run.RESULTS_DELIMITER);
+
+            Console.WriteLine("{0} Accumulated resolution attempts (Low-Level): {1}", this, this.accResolutionAttempts);
+            Console.WriteLine("{0} Accumulated merges (Low-Level): {1}", this, this.accMerges);
+
+            output.Write(this.accResolutionAttempts + Run.RESULTS_DELIMITER);
+            output.Write(this.accMerges + Run.RESULTS_DELIMITER);
         }
 
         /// <summary>
-        /// Also calculates min group size and max solution depth on the way.
+        /// Also calculates min group size along the way.
         /// FIXME: Code dup!
         /// </summary>
         /// <returns></returns>
         public int GetMaxGroupSize()
         {
-            this.solutionDepth = 0;
-            this.maxGroupSize = 0;
-            this.minGroupSize = int.MaxValue;
-            foreach (var group in this.allGroups)
-            {
-                this.solutionDepth += group.depthOfSolution;
-                if (group.allAgentsState.Length > this.maxGroupSize)
-                    this.maxGroupSize = group.allAgentsState.Length;
-                if (group.allAgentsState.Length < this.minGroupSize)
-                    this.minGroupSize = group.allAgentsState.Length;
-            }
+            this.maxGroupSize = this.allGroups.Max(group => group.allAgentsState.Length);
+            this.minGroupSize = this.allGroups.Min(group => group.allAgentsState.Length);
             return this.maxGroupSize;
         }
+
+        public enum ConflictChoice : byte
+        {
+            FIRST = 0,
+            MOST_CONFLICTING_SMALLEST_AGENTS
+        }
+        public ConflictChoice conflictChoice = ConflictChoice.MOST_CONFLICTING_SMALLEST_AGENTS;  // TODO: set it in the constructor.
+
         /// <summary>
         /// Simulates the execution of the plans found for the different groups. 
         /// If there are conflicting plans - return the conflicting groups.
         /// </summary>
         /// <returns>A conflict object with data about the found conflict, or null if no conflict exists</returns>
-        public IndependenceDetectionConflict FindConflictingGroups()
+        public IndependenceDetectionConflict ChooseConflict()
         {
-            if (this.allGroups.Count == 1)
+            if (this.allGroups.Count == 1)  // A single group can't conflict with itself
                 return null;
-            
+
+            if (totalConflictCount == 0)
+                return null;
+
+            if (this.conflictChoice == IndependenceDetection.ConflictChoice.FIRST)
+            {
+                return this.ChooseFirstConflict();
+            }
+            else if (this.conflictChoice == IndependenceDetection.ConflictChoice.MOST_CONFLICTING_SMALLEST_AGENTS)
+            {
+                return this.ChooseConflictOfMostConflictingSmallestAgents();
+            }
+            else
+                throw new Exception("Unknown conflict choosing method");
+        }
+
+        private int GetGroupSize(int groupNum)
+        {
+            foreach (var group in this.allGroups)
+            {
+                if (group.groupNum == groupNum)
+                    return group.allAgentsState.Length;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Populates the countsOfInternalGroupsThatConflict counters
+        /// from the conflictCountsPerGroup values that are created while solving or replanning.
+        /// Those counters are used for tie-breaking.
+        /// </summary>
+        protected void CountConflicts()
+        {
+            totalConflictCount = 0;
+            for (int i = 0; i < this.conflictCountsPerGroup.Length; i++)
+            {
+                this.countsOfGroupsThatConflict[i] = 0;
+
+                if (this.conflictCountsPerGroup[i] == null)
+                    continue;
+
+                foreach (KeyValuePair<int, int> conflictingGroupNumAndCount in conflictCountsPerGroup[i])
+                {
+                    this.countsOfGroupsThatConflict[i]++; // Counts one conflict for each agent the i'th agent conflicts with
+                    totalConflictCount += conflictingGroupNumAndCount.Value;
+                }
+            }
+
+            totalConflictCount /= 2;  // Each conflict was counted twice
+        }
+
+        /// <summary>
+        /// Chooses the first agent to be the one that maximizes the number of agents it conflicts with internally divided by 2^(group_size-1).
+        /// Then chooses an agent among the agents it conflicts with using the same formula.
+        /// Then chooses their first conflict.
+        ///
+        /// Choosing the agent that conflicts the most is a greedy strategy.
+        /// Had replanning promised to resolve all conflicts, it would've been better to choose according to the minimum vertex cover.
+        /// 
+        /// Assumes all agents are initially on the same timestep (no OD).
+        /// 
+        /// TODO: Prefer conflicts where one of the conflicting agents is at their goal, to reduce the danger of task blow-up
+        /// by enabling partial expansion. On the other hand, partial expansion is only possible in basic CBS.
+        /// </summary>
+        private IndependenceDetectionConflict ChooseConflictOfMostConflictingSmallestAgents()
+        {
+            int groupRepA = -1; // To quiet the compiler
+            int groupRepB = -1; // To quiet the compiler
+            int time = int.MaxValue;
+            Func<int, double> formula = i => this.conflictCountsPerGroup[i] != null ?
+                                                this.countsOfGroupsThatConflict[i] / ((double)(1 << (this.GetGroupSize(i) - 1)))
+                                                : -1;
+
+            int chosenGroupNum = Enumerable.Range(0, this.instance.agents.Length).MaxByKeyFunc(formula);
+
+            // We could just look for any of this agent's conflicts,
+            // but the best choice among the agents it conflicts with is the one which maximizes the formula itself.
+            IEnumerable<int> conflictsWithGroupNums = this.conflictCountsPerGroup[chosenGroupNum].Keys;
+            int chosenConflictingGroupNum = conflictsWithGroupNums.MaxByKeyFunc(formula);
+
+            groupRepA = chosenGroupNum;
+            groupRepB = chosenConflictingGroupNum;
+
+            time = this.conflictTimesPerGroup[chosenGroupNum][chosenConflictingGroupNum][0];  // Choosing the earliest conflict between them - the choice doesn't matter for ID, but this is consistent with CBS' strategy
+
+            IndependenceDetectionAgentsGroup groupA = null, groupB = null;
+            foreach (var group in this.allGroups)
+            {
+                if (group.groupNum == groupRepA)
+                    groupA = group;
+                else if (group.groupNum == groupRepB)
+                    groupB = group;
+            }
+            return new IndependenceDetectionConflict(groupA, groupB, time);
+        }
+
+        private IndependenceDetectionConflict ChooseFirstConflict()
+        {
+            int groupRepA = -1; // To quiet the compiler
+            int groupRepB = -1; // To quiet the compiler
+            int time = int.MaxValue;
+            for (int i = 0; i < this.conflictTimesPerGroup.Length; i++)
+            {
+                if (conflictCountsPerGroup[i] == null)
+                    continue;
+
+                foreach (var otherGroupNumAndConflictTimes in this.conflictTimesPerGroup[i])
+                {
+                    if (otherGroupNumAndConflictTimes.Value[0] < time)
+                    {
+                        time = otherGroupNumAndConflictTimes.Value[0];
+                        groupRepA = i;
+                        groupRepB = otherGroupNumAndConflictTimes.Key;
+                    }
+                }
+            }
+            IndependenceDetectionAgentsGroup groupA = null, groupB = null;
+            foreach (var group in this.allGroups)
+            {
+                if (group.groupNum == groupRepA)
+                    groupA = group;
+                else if (group.groupNum == groupRepB)
+                    groupB = group;
+            }
+            return new IndependenceDetectionConflict(groupA, groupB, time);
+        }
+
+        public IndependenceDetectionConflict FindFirstConflict()
+        {
             // Find the longest plan among all the groups
-            int maxPlanSize = this.allGroups.Select(group => group.GetPlan().GetSize()).Max();
+            int maxPlanSize = this.allGroups.Max(group => group.GetPlan().GetSize());
+
+            Plan[] plans = this.allGroups.Select(group => group.GetPlan()).ToArray();
+
+            if (this.debug)
+            {
+                var globalPlan = new Plan(plans);
+                Debug.WriteLine($"{globalPlan}");
+            }
 
             // Check in every time step that the plans do not collide
-            for(int time = 1 ; time < maxPlanSize ; time++) // Assuming no conflicts exist in time zero.
+            for (int time = 1; time < maxPlanSize; time++) // Assuming no conflicts exist in time zero.
             {
-                int i1 = -1;
                 // Check all pairs of groups for a conflict at the given time step
-                foreach (var group1 in this.allGroups)
+                foreach ((int i1, var group1) in this.allGroups.Enumerate())
                 {
-                    i1++;
-                    Plan group1Plan = group1.GetPlan();
-                    int i2 = -1;
-                    foreach (var group2 in this.allGroups)
+                    Plan group1Plan = plans[i1];
+                    foreach ((int i2, var group2) in this.allGroups.Enumerate())
                     {
-                        i2++;
-                        Plan group2Plan = group2.GetPlan();
-                        if (i1 < i2 &&
-                            group1Plan.IsColliding(time, group2Plan))
+                        Plan group2Plan = plans[i2];
+                        if (i1 < i2 && group1Plan.IsColliding(time, group2Plan))
                             return new IndependenceDetectionConflict(group1, group2, time);
                     }
                 }
@@ -276,17 +442,17 @@ namespace mapf
         {
             while (true)
             {
-                IndependenceDetectionConflict conflict = FindConflictingGroups();
+                IndependenceDetectionConflict conflict = FindFirstConflict();
                 // If there are no conflicts - can finish the run
                 if (conflict == null)
                     break;
                 allGroups.Remove(conflict.group1);
                 allGroups.Remove(conflict.group2);
-                this.subproblem_id++;
-                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict, this.subproblem_id);
-                
+                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict);
+                ++merges;
+
                 // Solve composite group with A*
-                bool solved = compositeGroup.Solve(runner);
+                bool solved = compositeGroup.Solve(runner, conflictAvoidanceTable);
                 if (solved == false)
                 {
                     this.totalCost = compositeGroup.solutionCost;
@@ -310,119 +476,203 @@ namespace mapf
         {
             while (true)
             {
-                IndependenceDetectionConflict conflict = FindConflictingGroups();
+                if (this.debug)
+                {
+                    Debug.WriteLine($"{this.totalConflictCount} conflicts");
+                }
+
+                IndependenceDetectionConflict conflict = ChooseConflict();
                 // If there are no conflicts - can return the current plan
                 if (conflict == null)
                     break;
-                
-                if (this.allConflicts.Contains(conflict) == false)  // We haven't already tried to resolve this conflict
-                                                                    // without merging the groups 
+
+                if (this.debug)
                 {
-                    // Try to solve the current conflict by re-planning one of the groups
-                    if (this.debug)
+                    Debug.WriteLine($"{this.allGroups.Count} groups: {String.Join(", ", this.allGroups)}");
+
+                    Debug.Write("Group single agent costs: ");
+                    foreach (var group in this.allGroups)
                     {
-                        Debug.WriteLine($"Trying to find an alternative path that avoids {conflict}");
+                        Debug.Write($"{{{String.Join(" ", group.GetCosts())}}}, ");
                     }
-                    
+                    Debug.WriteLine("");
+
+                    for (int j = 0; j < this.conflictTimesPerGroup.Length; j++)
+                    {
+                        if (this.conflictTimesPerGroup[j] != null)
+                        {
+                            Debug.Write($"Group {j} conflict times: ");
+                            foreach (var pair in this.conflictTimesPerGroup[j])
+                            {
+                                Debug.Write($"{pair.Key}:[{String.Join(",", pair.Value)}], ");
+                            }
+                            Debug.WriteLine("");
+                        }
+                    }
+
+                    var plan = this.CalculateJointPlan();
+                    if (plan.GetSize() < 200)
+                        Debug.WriteLine(plan);
+                    else
+                        Debug.WriteLine($"Plan is too long to print ({plan.GetSize()} steps)");
+
+                    Debug.WriteLine($"Chose {conflict}");
+                }
+
+                // Try to resolve the current conflict by re-planning one of the groups' path
+                if (this.resolutionAttemptedFirstGroup.Contains(conflict) == false)  // We haven't already tried to resolve this conflict
+                                                                                     // without merging the groups by replanning the first group's path
+                {
                     // Prevent trying to resolve this conflict this way again
-                    this.allConflicts.Add(conflict);
+                    this.resolutionAttemptedFirstGroup.Add(conflict);
 
                     // Add the plan of group2 to the illegal moves table and re-plan group1 with equal cost
                     if ((conflict.time < conflict.group1.GetPlan().GetSize() - 1) ||
-                        (conflict.group1.allAgentsState.Length > 1)) // Otherwise the conflict is while a single agent
-                                                                     // is at its goal, no chance of an alternate path
-                                                                     // with the same cost that avoids the conflict
+                        (conflict.group1.Size() > 1))  // Otherwise the conflict is while a single agent
+                                                       // is at its goal, no chance of an alternate path
+                                                       // with the same cost that avoids the conflict - TODO: If it's an edge conflict while entering the goal it may be resolvable
                     {
                         if (this.debug)
                         {
-                            Debug.WriteLine($"Trying to find an alternative path that avoids a conflict for group 1.");
-                            Debug.WriteLine($"Old plan:");
-                            conflict.group1.GetPlan().PrintPlan();
+                            Debug.WriteLine($"Trying to find an alternative path that avoids the conflict for {conflict.group1}.");
+                            //Debug.WriteLine($"Old plan:\n{conflict.group1.GetPlan()}");
                         }
-                        conflict.group1.removeGroupFromCAT(conflictAvoidance);
-                        bool resolved = conflict.group1.ReplanUnderConstraints(conflict.group2.GetPlan(), runner, withSelection);
-                        conflict.group1.addGroupToCAT(conflictAvoidance, maxSolutionCostFound);
+                        conflict.group1.removeGroupFromCAT(conflictAvoidanceTable);
+                        bool resolved = conflict.group1.ReplanUnderConstraints(conflict.group2.GetPlan(), runner, this.conflictAvoidanceTable);
+                        ++resolutionAttempts;
                         if (resolved == true)
                         {
                             if (this.debug)
                             {
-                                Debug.WriteLine($"Found an alternative path that avoids a conflict for group 1:");
-                                conflict.group1.GetPlan().PrintPlan();
+                                //Debug.WriteLine($"Found an alternative path that avoids the conflict for group 1: {conflict.group1.GetPlan()}");
+                                Debug.WriteLine($"Found an alternative path that avoids the conflict for {conflict.group1}");
                             }
+
+                            UpdateConflictCounts(conflict.group1);
+                            conflict.group1.addGroupToCAT(conflictAvoidanceTable);
+
                             continue;
                         }
+                        else
+                            conflict.group1.addGroupToCAT(conflictAvoidanceTable);
 
                         if (this.debug)
                         {
-                            Debug.WriteLine($"Couldn't find an alternative path that avoids a conflict for group 1");
+                            Debug.WriteLine($"Couldn't find an alternative path that avoids the conflict for {conflict.group1}");
                         }
                     }
-                    
-                    // Add the plan of group1 to the illegal moves table and re-plan group2 with equal cost
-                    if ((conflict.time < conflict.group2.GetPlan().GetSize() - 1) ||
-                        (conflict.group2.allAgentsState.Length > 1))
+                    else
                     {
                         if (this.debug)
                         {
-                            Debug.WriteLine($"Trying to find an alternative path that avoids a conflict for group 2");
-                            Debug.WriteLine($"Old plan:");
-                            conflict.group2.GetPlan().PrintPlan();
-                        }
-                        conflict.group2.removeGroupFromCAT(conflictAvoidance);
-                        bool resolved = conflict.group2.ReplanUnderConstraints(conflict.group1.GetPlan(), runner, withSelection);
-                        conflict.group2.addGroupToCAT(conflictAvoidance, maxSolutionCostFound);
-                        if (resolved == true)
-                        {
-                            if (this.debug)
-                            {
-                                Debug.WriteLine($"Found an alternative path that avoids a conflict for group 2:");
-                                conflict.group2.GetPlan().PrintPlan();
-                            }
-                            continue;
-                        }
-                        if (this.debug)
-                        {
-                            Debug.WriteLine($"Couldn't find an alternative path that avoids a conflict for group 2");
+                            Debug.WriteLine($"Not trying to find an alternative path that avoids the conflict for {conflict.group1} because " +
+                                             "the group contains a single agent and the conflict happens after it reaches its goal.");
                         }
                     }
-                }
-
-                // Groups are conflicting - need to join them to a single group (If code is here, coulnd't resolve by either conflicts)
-                allGroups.Remove(conflict.group1);
-                allGroups.Remove(conflict.group2);
-                // Remove both groups from avoidance table
-                conflict.group1.removeGroupFromCAT(conflictAvoidance);
-                conflict.group2.removeGroupFromCAT(conflictAvoidance);
-                if (this.debug)
-                {
-                    Debug.WriteLine($"Merging the agent groups that participate in {conflict}. " +
-                                      $"Group1 plan before the merge: ");
-                    conflict.group1.GetPlan().PrintPlan();
-                    Debug.WriteLine($"Group2 plan before the merge: ");
-                    conflict.group2.GetPlan().PrintPlan();
-                }
-                this.subproblem_id++;
-                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict, this.subproblem_id);
-
-                compositeGroup.instance.parameters[CONFLICT_AVOIDANCE] = conflictAvoidance;
-
-                // Solve composite group with the underlying group solver
-                bool solved;
-                if (this.withSelection)
-                {
-                    solved = compositeGroup.SolveWithSelection(runner);
                 }
                 else
                 {
-                    solved = compositeGroup.Solve(runner);
+                    if (this.debug)
+                    {
+                        Debug.WriteLine($"Not trying to find an alternative path that avoids the conflict for {conflict.group1} - " +
+                                         "we've already tried to in the past.");
+                    }
                 }
+
+                if (this.resolutionAttemptedSecondGroup.Contains(conflict) == false)  // We haven't already tried to resolve this conflict
+                                                                                      // without merging the groups by replanning the second group's path
+                {
+                    // Prevent trying to resolve this conflict this way again
+                    this.resolutionAttemptedSecondGroup.Add(conflict);
+
+                    // Add the plan of group1 to the illegal moves table and re-plan group2 with equal cost
+                    if ((conflict.time < conflict.group2.GetPlan().GetSize() - 1) ||
+                        (conflict.group2.Size() > 1))
+                    {
+                        if (this.debug)
+                        {
+                            Debug.WriteLine($"Trying to find an alternative path that avoids the conflict for {conflict.group2}");
+                            //Debug.WriteLine($"Old plan: {conflict.group2.GetPlan()}");
+                        }
+                        conflict.group2.removeGroupFromCAT(conflictAvoidanceTable);
+                        bool resolved = conflict.group2.ReplanUnderConstraints(conflict.group1.GetPlan(), runner, this.conflictAvoidanceTable);
+                        ++resolutionAttempts;
+                        if (resolved == true)
+                        {
+                            if (this.debug)
+                            {
+                                //Debug.WriteLine($"Found an alternative path that avoids the conflict for group 2: {conflict.group2.GetPlan()}");
+                                Debug.WriteLine($"Found an alternative path that avoids the conflict for {conflict.group2}");
+                            }
+
+                            UpdateConflictCounts(conflict.group2);
+                            conflict.group2.addGroupToCAT(conflictAvoidanceTable);
+
+                            continue;
+                        }
+                        else
+                            conflict.group2.addGroupToCAT(conflictAvoidanceTable);
+
+                        if (this.debug)
+                        {
+                            Debug.WriteLine($"Couldn't find an alternative path that avoids the conflict for {conflict.group2}");
+                        }
+                    }
+                    else
+                    {
+                        if (this.debug)
+                        {
+                            Debug.WriteLine($"Not trying to find an alternative path that avoids the conflict for {conflict.group2} because " +
+                                             "the group contains a single agent and the conflict happens after it reaches its goal.");
+                        }
+                    }
+                }
+                else
+                {
+                    if (this.debug)
+                    {
+                        Debug.WriteLine($"Not trying to find an alternative path that avoids the conflict for {conflict.group2} - " +
+                                         "we've already tried to in the past.");
+                    }
+                }
+
+                int group1Size = conflict.group1.Size();
+                int group1Cost = conflict.group1.solutionCost;
+                int group2Cost = conflict.group2.solutionCost;
+                // Groups are conflicting - need to join them to a single group
+                allGroups.Remove(conflict.group1);
+                allGroups.Remove(conflict.group2);
+                // Remove both groups from avoidance table
+                conflict.group1.removeGroupFromCAT(conflictAvoidanceTable);
+                conflict.group2.removeGroupFromCAT(conflictAvoidanceTable);
+                conflictCountsPerGroup[conflict.group1.groupNum] = null;
+                conflictTimesPerGroup[conflict.group1.groupNum] = null;
+                conflictCountsPerGroup[conflict.group2.groupNum] = null;
+                conflictTimesPerGroup[conflict.group2.groupNum] = null;
+                // Remove the old groups from the conflict counts - new counts will be put there after replanning
+                for (int i = 0; i < this.conflictCountsPerGroup.Length; i++)
+                {
+                    this.conflictCountsPerGroup[i]?.Remove(conflict.group1.groupNum);
+                    this.conflictCountsPerGroup[i]?.Remove(conflict.group2.groupNum);
+                    this.conflictTimesPerGroup[i]?.Remove(conflict.group1.groupNum);
+                    this.conflictTimesPerGroup[i]?.Remove(conflict.group2.groupNum);
+                }
+                if (this.debug)
+                {
+                    Debug.WriteLine($"Merging the agent groups that participate in {conflict}.");
+                    //Debug.WriteLine($"Group1 plan before the merge: {conflict.group1.GetPlan()}");
+                    //Debug.WriteLine($"Group2 plan before the merge: {conflict.group2.GetPlan()}");
+                }
+
+                IndependenceDetectionAgentsGroup compositeGroup = this.JoinGroups(conflict);
+                ++merges;
+
+                // Solve composite group with the underlying group solver
+                bool solved = compositeGroup.Solve(runner, conflictAvoidanceTable,
+                                                   group1Cost, group2Cost, group1Size);
 
                 if (compositeGroup.solutionCost > maxSolutionCostFound)
                     maxSolutionCostFound = compositeGroup.solutionCost;
-
-                // Add the new group to conflict avoidance table
-                compositeGroup.addGroupToCAT(conflictAvoidance, maxSolutionCostFound);
-                allGroups.AddFirst(compositeGroup);
 
                 this.expanded += compositeGroup.expanded;
                 this.generated += compositeGroup.generated;
@@ -435,8 +685,65 @@ namespace mapf
                     this.totalCost = Constants.NO_SOLUTION_COST;
                     return false;
                 }
+
+                UpdateConflictCounts(compositeGroup);
+
+                // Add the new group to conflict avoidance table
+                compositeGroup.addGroupToCAT(conflictAvoidanceTable);
+                allGroups.AddFirst(compositeGroup);
             }
             return true;
+        }
+
+        void UpdateConflictCounts(IndependenceDetectionAgentsGroup group)
+        {
+            conflictCountsPerGroup[group.groupNum] = group.conflictCounts;
+            conflictTimesPerGroup[group.groupNum] = group.conflictTimes;
+
+            // Update conflict counts with what happens after the plan finishes
+            this.IncrementConflictCountsAtGoal(group, conflictAvoidanceTable);
+
+            // Update conflictCountsPerGroup and conflictTimesPerGroup for all other groups
+            for (int i = 0; i < this.conflictCountsPerGroup.Length; ++i)
+            {
+                if (this.conflictCountsPerGroup[i] == null || i == group.groupNum)
+                    continue;
+
+                if (group.conflictCounts.ContainsKey(i))
+                {
+                    this.conflictCountsPerGroup[i][group.groupNum] = group.conflictCounts[i];
+                    this.conflictTimesPerGroup[i][group.groupNum] = group.conflictTimes[i];
+                }
+                else
+                {
+                    this.conflictCountsPerGroup[i].Remove(group.groupNum);
+                    this.conflictTimesPerGroup[i].Remove(group.groupNum);
+                }
+            }
+
+            CountConflicts();
+        }
+
+        /// <summary>
+        /// Update conflict counts according to what happens after the plan finishes -
+        /// needed if the plan is shorter than one of the previous plans and collides
+        /// with it while at the goal.
+        /// It's cheaper to do it this way than to force the solver the go more deeply.
+        /// The conflict counts are saved at the group's representative.
+        /// </summary>
+        protected void IncrementConflictCountsAtGoal(IndependenceDetectionAgentsGroup group, ConflictAvoidanceTable CAT)
+        {
+            for (int i = 0; i < group.allAgentsState.Length; ++i)
+            {
+                var afterGoal = new TimedMove(group.allAgentsState[i].agent.Goal.x, group.allAgentsState[i].agent.Goal.y, Move.Direction.Wait, time: 0);
+                for (int time = group.GetPlan().GetSize(); time < CAT.GetMaxPlanSize(); time++)
+                {
+                    afterGoal.time = time;
+                    afterGoal.IncrementConflictCounts(CAT,
+                                                      this.conflictCountsPerGroup[group.groupNum],
+                                                      this.conflictTimesPerGroup[group.groupNum]);
+                }
+            }
         }
 
         /// <summary>
@@ -444,9 +751,9 @@ namespace mapf
         /// </summary>
         /// <param name="conflict">An object that describes the conflict</param>
         /// <returns>The composite group of agents</returns>
-        protected virtual IndependenceDetectionAgentsGroup JoinGroups(IndependenceDetectionConflict conflict, int new_problem_id)
+        protected virtual IndependenceDetectionAgentsGroup JoinGroups(IndependenceDetectionConflict conflict)
         {
-            return conflict.group1.Join(conflict.group2, new_problem_id);
+            return conflict.group1.Join(conflict.group2);
         }
 
         /// <summary>
@@ -456,13 +763,13 @@ namespace mapf
         public bool Solve()
         {
             bool solved;
+
             // Solve the single agent problems independently
             this.maxSolutionCostFound = 0;
 
             foreach (var group in this.allGroups)
             {
-                group.instance.parameters[CONFLICT_AVOIDANCE] = this.conflictAvoidance;
-                solved = group.Solve(runner);
+                solved = group.Solve(runner, this.conflictAvoidanceTable);
 
                 // Check if max time has been exceeded or search failed for another reason
                 if (solved == false)
@@ -474,20 +781,41 @@ namespace mapf
 
                 if (group.solutionCost > this.maxSolutionCostFound)
                     this.maxSolutionCostFound = group.solutionCost;
+
+                conflictCountsPerGroup[group.groupNum] = group.conflictCounts;
+                conflictTimesPerGroup[group.groupNum] = group.conflictTimes;
+
+                this.IncrementConflictCountsAtGoal(group, conflictAvoidanceTable);
+
                 // Add group to conflict avoidance table
-                group.addGroupToCAT(this.conflictAvoidance, this.maxSolutionCostFound);
+                group.addGroupToCAT(this.conflictAvoidanceTable);
 
                 this.expanded += group.expanded;
                 this.generated += group.generated;
             }
 
-            //solved = this.SimpleID(runner);
+            // Update conflict counts: All agents but the last saw an incomplete CAT. Update counts backwards.
+            for (int i = this.conflictCountsPerGroup.Length - 1; i >= 0; i--)
+            {
+                foreach (KeyValuePair<int, int> pair in this.conflictCountsPerGroup[i])
+                {
+                    if (pair.Key < i)  // Just an optimization. Would also be correct without this check.
+                    {
+                        this.conflictCountsPerGroup[pair.Key][i] = pair.Value; // Collisions are symmetrical, and agent "key" didn't see the route for agent "i" when planning.
+                        this.conflictTimesPerGroup[pair.Key][i] = this.conflictTimesPerGroup[i][pair.Key];
+                    }
+                }
+            }
+
+            CountConflicts();
+
+            //solved = this.SimpleID(runner);  // TODO: Consider adding a parameter to choose this option
             solved = this.ImprovedID(runner);
             // Record found solution
             if (solved == true)
             {
                 // Store solution details
-                this.totalCost = this.allGroups.Select(group => group.solutionCost).Sum();
+                this.totalCost = this.allGroups.Sum(group => group.solutionCost);  // TODO: Support the makespan cost function
                 this.plan = this.CalculateJointPlan();
             }
             else
@@ -513,7 +841,11 @@ namespace mapf
 
         public int GetExpanded() { return this.expanded; }
         public int GetGenerated() { return this.generated; }
-        public int GetSolutionDepth() { return solutionDepth; }
+        public int GetSolutionDepth()
+        {
+            this.solutionDepth = this.allGroups.Sum(group => group.solutionDepth);  // TODO: Support the makespan cost function
+            return this.solutionDepth;
+        }
         public long GetMemoryUsed() { return Process.GetCurrentProcess().VirtualMemorySize64; }
     }
 
@@ -528,192 +860,44 @@ namespace mapf
         public ProblemInstance instance;
         public int expanded;
         public int generated;
-        public int depthOfSolution;
+        public int solutionDepth;
+        public int groupNum;
 
-        private ISolver singleAgentSolver;
-        private ISolver groupSolver;
+        private IIndependenceDetectionSolver singleAgentSolver;  // Note this allows groups to be given different solvers, according to perhaps their size
+        private IIndependenceDetectionSolver groupSolver;
         private Plan plan;
+        private int[] singleCosts;
+        public Dictionary<int, int> conflictCounts;
+        public Dictionary<int, List<int>> conflictTimes;
 
-        //ClassificationXGBoostModel selectionModel;
-        private SumIndividualCosts simple;
-        private EPEA_Star epea;
-        private A_Star astar;
-        private A_Star_WithOD astar_with_od;
-
-        private CBS macbs;
-        private CostTreeSearchSolverOldMatching icts;
-        private CBS cbs;
-        private MvcHeuristicForCbs mvc_for_cbs;
-        private CBS cbsh;
-
-
-        private Run runner;
-        private int subproblem_id;
-        private long timeToSolver;
-
-        public IndependenceDetectionAgentsGroup(ProblemInstance instance, AgentState[] allAgentsState, ISolver singleAgentSolver, ISolver groupSolver, Run runner, int subproblem_id)
+        public IndependenceDetectionAgentsGroup(ProblemInstance instance, AgentState[] allAgentsState,
+                                                IIndependenceDetectionSolver singleAgentSolver, IIndependenceDetectionSolver groupSolver)
         {
             this.allAgentsState = allAgentsState;
             this.instance = instance.Subproblem(allAgentsState);
             this.singleAgentSolver = singleAgentSolver;
             this.groupSolver = groupSolver;
-            
-            var model_path = Path.Combine(Environment.CurrentDirectory, "testing-clf.xgb");
-
-            //selectionModel = new ClassificationXGBoostLearner();
-            //this.selectionModel = ClassificationXGBoostModel.Load(model_path);
-
-            this.simple = new SumIndividualCosts(); //Should get form Runner!
-            this.epea = new EPEA_Star(this.simple);
-            this.astar = new A_Star(this.simple);
-            this.astar_with_od = new A_Star_WithOD(this.simple);
-            this.macbs = new CBS(this.astar, this.epea, 10);
-            this.icts = new CostTreeSearchSolverOldMatching(3);
-            this.cbs = new CBS(this.astar, this.epea);
-            this.mvc_for_cbs = new MvcHeuristicForCbs();
-
-            //for (int i = 0; i < astar_heuristics.Count; i++)
-                //astar_heuristics[i].Init(instance, agentList);
-
-            this.cbsh = new CBS(astar, astar_with_od,
-                mergeThreshold: -1,
-                CBS.BypassStrategy.FIRST_FIT_LOOKAHEAD,
-                doMalte: false,
-                CBS.ConflictChoice.CARDINAL_MDD,
-                this.mvc_for_cbs,
-                disableTieBreakingByMinOpsEstimate: true,
-                lookaheadMaxExpansions: 1,
-                mergeCausesRestart: true,
-                replanSameCostWithMdd: false,
-                cacheMdds: false,
-                useOldCost: false,
-                useCAT: true);
-
-            //this.runner = runner;
-            this.subproblem_id = subproblem_id;
-            this.timeToSolver = 0;
-        }
-
-        /// <summary>
-        /// Solve the group of agents together.
-        /// </summary>
-        /// <param name="myRunner"></param>
-        /// <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
-        public bool Solve(Run myRunner)
-        {
-            ISolver relevantSolver = this.groupSolver;
-
-            if (this.allAgentsState.Length == 1)
-                relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
-
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-
-            relevantSolver.Setup(this.instance, myRunner);
-            bool solved = relevantSolver.Solve();
-            watch.Stop();
-            this.timeToSolver = watch.ElapsedMilliseconds;
-
-            this.solutionCost = relevantSolver.GetSolutionCost();
-            if (solved == false)
-                return false;
-
-            // Store the plan found by the solver
-            this.plan = relevantSolver.GetPlan();
-            this.expanded = relevantSolver.GetExpanded();
-            this.generated = relevantSolver.GetGenerated();
-            this.depthOfSolution = relevantSolver.GetSolutionDepth();
-
-            //TODO: Add print stastistics to different writer - writer of ID metadata
-
-            myRunner.OpenMetaIDResultsFile();
-            myRunner.PrintMetaIDProblemStatistics(this.instance);
-            OutputIDMetaStatistics(myRunner.metaIDResultsWriter);
-            myRunner.metaIDResultsWriter.WriteLine();
-            myRunner.metaIDResultsWriter.Flush();
-            myRunner.CloseMetaIDResultsFile();
-            // Clear memory
-            relevantSolver.Clear();
-            return true;
-        }
-
-
-        public string solverNameByIndex(double solverIndex)
-        {
-            switch (solverIndex)
-            {
-                case 0:
-                    return "EPEA";
-                case 1:
-                    return "MA-CBS";
-                case 2:
-                    return "ICTS";
-                case 3:
-                    return "ASTAR";
-                case 4:
-                    return "CBS";
-                case 5:
-                    return "CBS-H";
-                default:
-                    return "WHAT?";
-            }
-        }
-
-        public ISolver solverByIndex(double solverIndex, ProblemInstance instance)
-        {
-            List<uint> agentList = Enumerable.Range(0, instance.agents.Length).Select(x => (uint)x).ToList(); // FIXME: Must the heuristics really receive a list of uints?
-
-            simple.Init(instance, agentList); //Important to init the heuristics before solving!
-
-            switch (solverIndex)
-            {
-                case 0:
-                    return epea;
-                case 1:
-                    return macbs;
-                case 2:
-                    return icts;
-                case 3:
-                    return astar;
-                case 4:
-                    return cbs;
-                case 5:
-                    return cbsh;
-                default:
-                    return null;
-            }
+            this.groupNum = allAgentsState[0].agent.agentNum;
         }
 
         /// <summary>
         /// Solve the group of agents together.
         /// </summary>
         /// <param name="runner"></param>
+        /// <param name="CAT"></param>
+        /// <param name="group1Cost"></param>
+        /// <param name="group2Cost"></param>
+        /// <param name="group1Size"></param>
+        /// <param name="reserved"></param>
         /// <returns>true if optimal solution for the group of agents were found, false otherwise</returns>
-        public bool SolveWithSelection(Run runner)
+        public bool Solve(Run runner, ConflictAvoidanceTable CAT,
+                          int group1Cost = 0, int group2Cost = 0, int group1Size = 1
+                          )
         {
-            ISolver relevantSolver = this.groupSolver;
+            IIndependenceDetectionSolver relevantSolver = this.groupSolver;
             if (this.allAgentsState.Length == 1)
-            {
-                relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves and such.
-                relevantSolver.Setup(this.instance, runner);
-            }
-            else
-            {
-                Stopwatch stopwatch = new Stopwatch();
-                stopwatch.Start();
-
-                //var pred = this.selectionModel.Predict(instance.ml_features.ToArray());
-                var pred = 5;
-                stopwatch.Stop();
-                Console.WriteLine("Time to predict which solver to use: {0} ms", stopwatch.ElapsedMilliseconds);
-                stopwatch.Start();
-
-                Console.WriteLine($"-----------------AS in ID-{solverNameByIndex(pred)}-----------------");
-                relevantSolver = solverByIndex(pred, this.instance);
-
-                relevantSolver.Setup(this.instance, runner); //TODO: Move setup to ctor
-                stopwatch.Stop();
-                Console.WriteLine("Time to setup solver: {0} ms", stopwatch.ElapsedMilliseconds);
-            }
+                relevantSolver = this.singleAgentSolver; // TODO: Consider using CBS's root trick to really get single agent paths fast. Though it won't respect illegal moves or avoid conflicts.
+            relevantSolver.Setup(this.instance, runner, CAT, group1Cost, group2Cost, group1Size);
             bool solved = relevantSolver.Solve();
             this.solutionCost = relevantSolver.GetSolutionCost();
             if (solved == false)
@@ -721,15 +905,17 @@ namespace mapf
 
             // Store the plan found by the solver
             this.plan = relevantSolver.GetPlan();
+            this.singleCosts = relevantSolver.GetSingleCosts();
             this.expanded = relevantSolver.GetExpanded();
             this.generated = relevantSolver.GetGenerated();
-            this.depthOfSolution = relevantSolver.GetSolutionDepth();
+            this.solutionDepth = relevantSolver.GetSolutionDepth();
+            this.conflictCounts = relevantSolver.GetExternalConflictCounts();
+            this.conflictTimes = relevantSolver.GetConflictTimes();
 
             // Clear memory
             relevantSolver.Clear();
             return true;
         }
-
 
         /// <summary>
         /// Returns the plan for the group of agents. This is a collection of Moves for every time step until all the agents reach their goal.
@@ -739,20 +925,25 @@ namespace mapf
             return this.plan;
         }
 
+        public int[] GetCosts()
+        {
+            return this.singleCosts;
+        }
+
         /// <summary>
         /// Joins this and another group to a single group with all of the agents together.
         /// </summary>
         /// <param name="other"></param>
         /// <returns>A new AgentsGroup object with the agents from both this and the other group</returns>
-        public IndependenceDetectionAgentsGroup Join(IndependenceDetectionAgentsGroup other, int new_id)
+        public IndependenceDetectionAgentsGroup Join(IndependenceDetectionAgentsGroup other)
         {
             AgentState[] joinedAgentStates = new AgentState[allAgentsState.Length + other.allAgentsState.Length];
             this.allAgentsState.CopyTo(joinedAgentStates, 0);
             other.allAgentsState.CopyTo(joinedAgentStates, this.allAgentsState.Length);
-            Array.Sort(joinedAgentStates, (x, y) => x.agent.agentNum.CompareTo(y.agent.agentNum));  // Technically could be a merge
+            if (this.groupSolver.GetType() != typeof(CostTreeSearchSolverOldMatching))
+                Array.Sort(joinedAgentStates, (x, y) => x.agent.agentNum.CompareTo(y.agent.agentNum));  // TODO: Technically could be a merge. FIXME: Is this necessary at all?
 
-            return new IndependenceDetectionAgentsGroup(this.instance, joinedAgentStates, this.singleAgentSolver, this.groupSolver, this.runner,
-                new_id);
+            return new IndependenceDetectionAgentsGroup(this.instance, joinedAgentStates, this.singleAgentSolver, this.groupSolver);
         }
 
         /// <summary>
@@ -788,90 +979,68 @@ namespace mapf
         /// and still has the same solution cost as the current solution cost.
         /// This is used in the ImprovedID() method.
         /// </summary>
-        /// <param name="plan"></param>
+        /// <param name="planToAvoid"></param>
         /// <param name="runner"></param>
         /// <returns></returns>
-        public bool ReplanUnderConstraints(Plan plan, Run runner, Boolean withSelection)
+        public bool ReplanUnderConstraints(Plan planToAvoid, Run runner, ConflictAvoidanceTable CAT)
         {
             int oldCost = this.solutionCost;
             Plan oldPlan = this.plan;
             HashSet<TimedMove> reserved = new HashSet<TimedMove>();
-            plan.AddPlanToHashSet(reserved, Math.Max(plan.GetSize(), this.plan.GetSize()));
+            planToAvoid.AddPlanToHashSet(reserved, Math.Max(planToAvoid.GetSize(), this.plan.GetSize()));
 
-            this.instance.parameters[IndependenceDetection.ILLEGAL_MOVES_KEY] = reserved;
-            this.instance.parameters[IndependenceDetection.MAXIMUM_COST_KEY] = solutionCost;  // TODO: add IIndependenceDetectionSolver to ISolver.cs with a Setup method that takes a maxCost
-            bool success;
-            if (withSelection)
-            {
-                success = this.SolveWithSelection(runner);
-            }
-            else
-            {
-                success = this.Solve(runner);
-            }
+            IIndependenceDetectionSolver relevantSolver = this.groupSolver;
+            if (this.allAgentsState.Length == 1)
+                relevantSolver = this.singleAgentSolver;
+            relevantSolver.Setup(this.instance, runner, CAT, oldCost, reserved);
+            bool solved = relevantSolver.Solve();
+            this.solutionCost = relevantSolver.GetSolutionCost();
 
+            conflictCounts = relevantSolver.GetExternalConflictCounts();
+            conflictTimes = relevantSolver.GetConflictTimes();
 
-            this.instance.parameters.Remove(IndependenceDetection.ILLEGAL_MOVES_KEY);
-            this.instance.parameters.Remove(IndependenceDetection.MAXIMUM_COST_KEY);
-            if (success == false)
+            // Store the plan found by the solver
+            this.plan = relevantSolver.GetPlan();
+            this.singleCosts = relevantSolver.GetSingleCosts();
+            this.expanded = relevantSolver.GetExpanded();
+            this.generated = relevantSolver.GetGenerated();
+            this.solutionDepth = relevantSolver.GetSolutionDepth();
+            this.conflictCounts = relevantSolver.GetExternalConflictCounts();
+            this.conflictTimes = relevantSolver.GetConflictTimes();
+
+            // Clear memory
+            relevantSolver.Clear();
+
+            if (solved == false)
             {
                 this.solutionCost = oldCost;
                 this.plan = oldPlan;
             }
-            return success;
+            return solved;
         }
 
-        public void addGroupToCAT(Dictionary<TimedMove, List<int>> CAT, int maxTimeStep)
+        public void addGroupToCAT(ConflictAvoidanceTable CAT)
         {
             if (this.plan == null)
                 return;
-            
-            for (int i = 1; i <= maxTimeStep * 2; i++) // TODO: Use the ConflictAvoidanceTable class instead
+
+            for (int i = 0; i < this.allAgentsState.Length; i++)
             {
-                List<Move> step = plan.GetLocationsAt(i);
-                foreach (Move move in step)
-                {
-                    TimedMove timedMove = new TimedMove(move, i);
-                    if (CAT.ContainsKey(timedMove) == false)
-                        CAT.Add(timedMove, new List<int>(this.allAgentsState.Length));
-                    CAT[timedMove].AddRange(this.allAgentsState.Select(state => state.agent.agentNum));
-                }
+                var singleAgentPlan = new SinglePlan(this.plan, i, this.groupNum);  // Note all the plans are inserted under the group's identifier
+                CAT.AddPlan(singleAgentPlan);
             }
         }
 
-        public void removeGroupFromCAT(Dictionary<TimedMove, List<int>> CAT)
+        public void removeGroupFromCAT(ConflictAvoidanceTable CAT)
         {
-            int i = 1;
-            bool stop = false;
-            while (stop == false)
+            if (this.plan == null)
+                return;
+
+            for (int i = 0; i < this.allAgentsState.Length; i++)
             {
-                List<Move> step = plan.GetLocationsAt(i);
-                foreach (Move move in step)
-                {
-                    var S = new TimedMove(move, i);
-                    if (CAT.ContainsKey(S))
-                        CAT.Remove(S);
-                    else
-                    {
-                        stop = true;
-                        break;
-                    }
-                }
-                i++;
+                var singleAgentPlan = new SinglePlan(this.plan, i, this.groupNum);
+                CAT.RemovePlan(singleAgentPlan);
             }
-        }
-
-
-        /// <summary>
-        /// Prints statistics of every ID solver to the given output. 
-        /// </summary>
-        public void OutputIDMetaStatistics(TextWriter output)//, BsonDocument row)
-        {
-            //"GroupNumber","SolverUsed","SolverRuntime","GroupSize"
-            output.Write(this.subproblem_id + Run.RESULTS_DELIMITER);
-            output.Write(this.groupSolver.GetName() + Run.RESULTS_DELIMITER);
-            output.Write(this.timeToSolver + Run.RESULTS_DELIMITER);
-            output.Write(this.allAgentsState.Length + Run.RESULTS_DELIMITER);
         }
 
         public override string ToString()

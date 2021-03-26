@@ -182,8 +182,9 @@ namespace mapf
         };
 
         protected static readonly string[] scenDirs = {
-            Path.Combine("scen", "scen1"),
+            //Path.Combine("scen", "scen1"),
             //Path.Combine("..", "..", "scen", "scen-random")
+            Path.Combine("..", "..", "scen", "scen-custom")
         };
 
         /// <summary>
@@ -364,7 +365,7 @@ namespace mapf
                 IHeuristicCalculator<WorldState> lowLevelHeuristic = new SumIndividualCosts();
                 List<uint> agentList = Enumerable.Range(0, instance.agents.Length).Select(x=> (uint)x).ToList(); // FIXME: Must the heuristics really receive a list of uints?
                 lowLevelHeuristic.Init(instance, agentList);
-                ICbsSolver lowLevel = new A_Star(lowLevelHeuristic);
+                IIndependenceDetectionSolver lowLevel = new A_Star(lowLevelHeuristic);
                 ILazyHeuristic<CbsNode> highLevelHeuristic = new MvcHeuristicForCbs();
                 highLevelHeuristic.Init(instance, agentList);
 //                ISolver solver = new CBS(lowLevel, lowLevel,
@@ -446,7 +447,8 @@ namespace mapf
             }
             else if (runNathan == true)
             {
-                string[] scenDirs = { Path.Combine(@"..","scen", "scen1") };
+                //string[] scenDirs = { Path.Combine(@"..","scen", "scen-random") };
+                string[] scenDirs = { Path.Combine(@"..", "scen", "scen-custom") };
                 foreach (var dirName in scenDirs)
                 {
                     foreach (   var scenPath in Directory.GetFiles(dirName))
@@ -463,7 +465,6 @@ namespace mapf
             // A function to be used by Eric's PDB code
             //me.runForPdb();
             Console.WriteLine("*********************THE END**************************");
-            Console.ReadLine();
         }
 
         public void RunNathanExperimentSet(String scenMapFileName)

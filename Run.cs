@@ -634,7 +634,7 @@ namespace mapf
             //solvers.Add(new IndependenceDetection(astar, epea, true));
 
             //// ICTS + ID 
-            //solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
+            solvers.Add(new IndependenceDetection(astar, new CostTreeSearchSolverOldMatching(3)));
 
             //// EPEA*+ID
             solvers.Add(new IndependenceDetection(astar, epea));
@@ -911,7 +911,7 @@ namespace mapf
 
             int solutionCost = -1;
             int firstSolverToSolveIndex = -1;
-
+            Boolean solved = false;
             for (int i = 0; i < solvers.Count; i++)
             {
                 if (outOfTimeCounters[i] < Constants.MAX_FAIL_COUNT) // After "MAX_FAIL_COUNT" consecutive failures of a given algorithm we stop running it.
@@ -966,6 +966,7 @@ namespace mapf
 
                     if (solverSolutionCost >= 0) // Solved successfully
                     {
+                        solved = true;
                         if ((solvers[i].GetType() != typeof(SATSolver)) && (solvers[i].GetType()!=typeof(LazyCBS_Solver)))
                         {
                             Plan plan = solvers[i].GetPlan();
@@ -975,26 +976,39 @@ namespace mapf
                             else
                                 Console.WriteLine($"Plan is too long to print ({planSize} steps).");
 
-                            if (!string.IsNullOrEmpty(plan_fileName))
-                            {
-                                plan.PrintPlanTo(solvers[i].GetName(), plan_fileName);
-                            }
+                            //if (!string.IsNullOrEmpty(plan_fileName))
+                            //{
+                            //    plan.PrintPlan(solvers[i].GetName(), plan_fileName);
+                            //}
                         }
                         outOfTimeCounters[i] = 0;
 
                         // Validate solution:
                         if (solutionCost == -1) // This is the first time the problem is successfully solved
                         {
-                            solutionCost = solverSolutionCost;
-                            firstSolverToSolveIndex = i;
+                            if ((solvers[i].GetType() != typeof(SATSolver)) && (solvers[i].GetType() != typeof(LazyCBS_Solver)))
+                            {
+                                solutionCost = solverSolutionCost;
+                                firstSolverToSolveIndex = i;
+                                Plan plan = solvers[i].GetPlan();
+                                plan.Check(instance);
+                            }
+
                         }
                         else // Problem solved before
                         {
-                            Debug.Assert(solutionCost == solverSolutionCost,
-                                $"{solvers[firstSolverToSolveIndex]} solution cost is different than that of {solvers[i]}"); // Assuming algs are supposed to find an optimal solution, this is an error.
-                            //Debug.Assert(solvers[0].GetExpanded() == solvers[i].GetExpanded(), "Different Expanded");
-                            //Debug.Assert(solvers[0].GetGenerated() == solvers[i].GetGenerated(), "Different Generated");
-                            //Debug.Assert(solvers[0].GetSolutionDepth() == solvers[i].GetSolutionDepth(), "Depth Bug " + solvers[i]);
+                            if ((solvers[i].GetType() != typeof(SATSolver)) && (solvers[i].GetType() != typeof(LazyCBS_Solver)))
+                            {
+                                Plan plan = solvers[i].GetPlan();
+                                plan.Check(instance);
+                                Trace.Assert(solutionCost == solverSolutionCost,
+                                    $"{solvers[firstSolverToSolveIndex]} solution cost is different than that of {solvers[i]}"); // Assuming algs are supposed to find an optimal solution, this is an error.
+                            }
+
+                            
+                            //Trace.Assert(solvers[0].GetExpanded() == solvers[i].GetExpanded(), "Different Expanded");
+                            //Trace.Assert(solvers[0].GetGenerated() == solvers[i].GetGenerated(), "Different Generated");
+                            //Trace.Assert(solvers[0].GetSolutionDepth() == solvers[i].GetSolutionDepth(), "Depth Bug " + solvers[i]);
                         }
 
                         Console.WriteLine("+SUCCESS+ (:");
@@ -1012,7 +1026,7 @@ namespace mapf
             }
             this.ContinueToNextLine(this.resultsWriter);
             
-            return solutionCost != -1;
+            return solved;
         }
 
         /// <summary>
@@ -1172,7 +1186,6 @@ namespace mapf
                 this.writeCellToCsv(solver + " Runtime", writer);
                 this.writeCellToCsv(solver + " Solution Cost", writer);
                 solver.OutputStatisticsHeader(writer);
-                this.writeCellToCsv(solver + " Max Group", writer);
                 this.writeCellToCsv(solver + " Solution Depth", writer);
             }
 
@@ -1198,8 +1211,6 @@ namespace mapf
             this.resultsWriter.Write(solver.GetSolutionCost() + RESULTS_DELIMITER);
             // Algorithm specific cols:
             solver.OutputStatistics(this.resultsWriter);
-            // Max Group col:
-            this.resultsWriter.Write(solver.GetMaxGroupSize() + RESULTS_DELIMITER);
             // Solution Depth col:
             this.resultsWriter.Write(solver.GetSolutionDepth() + RESULTS_DELIMITER);
             //this.resultsWriter.Flush();
@@ -1316,8 +1327,8 @@ namespace mapf
             // Algorithm specific cols:
             for (int i = 0; i < solver.NumStatsColumns; ++i)
                 this.resultsWriter.Write("irrelevant" + RESULTS_DELIMITER);
-            // Max Group col:
-            this.resultsWriter.Write("irrelevant" + RESULTS_DELIMITER);
+            //// Max Group col:
+            //this.resultsWriter.Write("irrelevant" + RESULTS_DELIMITER);
             // Solution Depth col:
             this.resultsWriter.Write("irrelevant" + RESULTS_DELIMITER);
         }

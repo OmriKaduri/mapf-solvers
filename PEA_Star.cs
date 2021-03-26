@@ -37,16 +37,17 @@ namespace mapf
             return new WorldStateForPartialExpansion((WorldStateForPartialExpansion)from);
         }
 
-        public override void Setup(ProblemInstance problemInstance, int minDepth, Run runner,
-                                   int minCost = -1, int maxCost = int.MaxValue, MDD mdd = null)
-        { 
-            base.Setup(problemInstance, minDepth, runner, minCost, maxCost, mdd);
+        public override void Setup(ProblemInstance problemInstance, int minTimeStep, Run runner,
+                                   ConflictAvoidanceTable CAT, ISet<CbsConstraint> constraints, ISet<CbsConstraint> positiveConstraints,
+                                   int minCost, int maxCost, MDD mdd)
+        {
+            base.Setup(problemInstance, minTimeStep, runner, CAT, constraints, positiveConstraints, minCost, maxCost, mdd);
             this.generatedAndDiscarded = 0;
             this.expandedFullStates = 0;
         }
 
         override public string GetName() { return "(B)PE" + base.GetName(); }
-        
+
         override public void Expand(WorldState simpleLookingNode)
         {
             var node = (WorldStateForPartialExpansion)simpleLookingNode;

@@ -1,0 +1,6 @@
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\netcoreapp2.1\mapf.csprojAssemblyReference.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\netcoreapp2.1\mapf.Properties.Resources.resources
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\netcoreapp2.1\mapf.csproj.GenerateResource.cache
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\netcoreapp2.1\mapf.dll.manifest
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\netcoreapp2.1\mapf.dll
+C:\Users\omri\Projects\study\2019semB\agentsPlanning\new-mapf\obj\Release\netcoreapp2.1\mapf.pdb
